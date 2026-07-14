@@ -69,6 +69,7 @@ defmodule LobbyTui.MixProject do
       # ash
       {:ash_phoenix, "~> 2.0"},
       {:ash, "~> 3.0"},
+      {:simple_sat, "~> 0.1"},
 
       # dev / test
       {:phoenix_live_reload, "~> 1.2", only: :dev},

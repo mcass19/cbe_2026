@@ -24,5 +24,12 @@ defmodule LobbyTui.Lobby do
       define :release_seat, action: :release
       define :seat_of, action: :by_occupant, args: [:attendee_id]
     end
+
+    resource LobbyTui.Lobby.Message do
+      define :post_message, action: :post, args: [:body]
+      define :stage_feed, action: :stage_feed
+      define :delete_own_message, action: :delete_own, default_options: [return_destroyed?: true]
+      define :moderate_delete, action: :moderate, default_options: [return_destroyed?: true]
+    end
   end
 end

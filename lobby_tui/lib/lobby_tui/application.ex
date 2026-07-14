@@ -12,6 +12,7 @@ defmodule LobbyTui.Application do
       {DNSCluster, query: Application.get_env(:lobby_tui, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: LobbyTui.PubSub},
       LobbyTui.SeatKeeper,
+      LobbyTui.RateLimiter,
       # Start a worker by calling: LobbyTui.Worker.start_link(arg)
       # {LobbyTui.Worker, arg},
       # Start to serve requests, typically the last entry
