@@ -11,6 +11,8 @@ defmodule LobbyTui.Application do
       LobbyTuiWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:lobby_tui, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: LobbyTui.PubSub},
+      LobbyTui.Presence,
+      LobbyTui.Reaper,
       LobbyTui.SeatKeeper,
       LobbyTui.RateLimiter,
       LobbyTui.SpriteLoader,

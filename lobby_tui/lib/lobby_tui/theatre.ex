@@ -43,6 +43,43 @@ defmodule LobbyTui.Theatre do
   @impl true
   def handle_info({:say, body}, state), do: {:noreply, say(state, body)}
 
+  def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, state) do
+    {:noreply, %{state | others: LobbyTui.Presence.others(state.attendee.id)}}
+  end
+
+  def handle_info(
+        %Phoenix.Socket.Broadcast{
+          topic: "lobby:seats",
+          payload: %Ash.Notifier.Notification{data: seat}
+        },
+        state
+      ) do
+    occupied =
+      if is_nil(seat.occupant_id) do
+        Map.delete(state.occupied, {seat.x, seat.y})
+      else
+        Map.put(state.occupied, {seat.x, seat.y}, seat.occupant_id)
+      end
+
+    {:noreply, %{state | occupied: occupied}}
+  end
+
+  def handle_info(
+        %Phoenix.Socket.Broadcast{
+          topic: "lobby:stage",
+          payload: %Ash.Notifier.Notification{data: message}
+        },
+        %State{seated?: true} = state
+      ) do
+    if Enum.any?(state.feed, &(&1.id == message.id)) do
+      {:noreply, state}
+    else
+      {:noreply, %{state | feed: Enum.take([message | state.feed], 50)}}
+    end
+  end
+
+  def handle_info(%Phoenix.Socket.Broadcast{topic: "lobby:stage"}, state), do: {:noreply, state}
+
   def handle_info(_msg, state), do: {:noreply, state}
 
   # -- side effects ----------------------------------------------------------
@@ -87,7 +124,29 @@ defmodule LobbyTui.Theatre do
     end
   end
 
-  # Task 8 replaces these no-ops with Presence tracking and PubSub broadcasts.
-  defp connect(state), do: %{state | connected?: true}
+  defp connect(state) do
+    Phoenix.PubSub.subscribe(LobbyTui.PubSub, LobbyTui.Presence.topic())
+    Phoenix.PubSub.subscribe(LobbyTui.PubSub, "lobby:seats")
+    Phoenix.PubSub.subscribe(LobbyTui.PubSub, "lobby:stage")
+    {:ok, _ref} = LobbyTui.Presence.track_attendee(state)
+
+    occupied =
+      Lobby.list_seats!()
+      |> Enum.reject(&is_nil(&1.occupant_id))
+      |> Map.new(&{{&1.x, &1.y}, &1.occupant_id})
+
+    %{
+      state
+      | connected?: true,
+        others: LobbyTui.Presence.others(state.attendee.id),
+        occupied: occupied
+    }
+  end
+
+  defp broadcast_position(%State{connected?: true} = state) do
+    {:ok, _ref} = LobbyTui.Presence.move(state)
+    state
+  end
+
   defp broadcast_position(state), do: state
 end

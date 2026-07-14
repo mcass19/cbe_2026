@@ -8,6 +8,7 @@ defmodule LobbyTui.Lobby.Message do
     domain: LobbyTui.Lobby,
     data_layer: Ash.DataLayer.Ets,
     authorizers: [Ash.Policy.Authorizer],
+    notifiers: [Ash.Notifier.PubSub],
     primary_read_warning?: false
 
   actions do
@@ -51,6 +52,13 @@ defmodule LobbyTui.Lobby.Message do
     policy action(:moderate) do
       forbid_if always()
     end
+  end
+
+  pub_sub do
+    module LobbyTuiWeb.Endpoint
+    prefix "lobby"
+
+    publish :post, "stage"
   end
 
   attributes do

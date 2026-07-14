@@ -6,7 +6,8 @@ defmodule LobbyTui.Lobby.Seat do
   use Ash.Resource,
     otp_app: :lobby_tui,
     domain: LobbyTui.Lobby,
-    data_layer: Ash.DataLayer.Ets
+    data_layer: Ash.DataLayer.Ets,
+    notifiers: [Ash.Notifier.PubSub]
 
   actions do
     defaults [:read]
@@ -34,6 +35,14 @@ defmodule LobbyTui.Lobby.Seat do
       require_atomic? false
       change set_attribute(:occupant_id, nil)
     end
+  end
+
+  pub_sub do
+    module LobbyTuiWeb.Endpoint
+    prefix "lobby"
+
+    publish :claim, "seats"
+    publish :release, "seats"
   end
 
   attributes do
