@@ -17,7 +17,9 @@ defmodule LobbyTuiWeb.Router do
   scope "/", LobbyTuiWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    get "/", JoinController, :new
+    post "/join", JoinController, :create
+    live "/lobby", LobbyLive
   end
 
   # Other scopes may use custom stacks.

@@ -1,0 +1,25 @@
+<div class="mx-auto max-w-md p-4">
+  <h1 class="text-2xl font-bold">TUIs everywhere — the lobby</h1>
+  <p :if={@error} id="join-error" class="text-red-600 py-2">{@error}</p>
+  <form id="join-form" action={~p"/join"} method="post">
+    <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+    <label for="nickname">Nickname</label>
+    <input id="nickname" name="nickname" type="text" minlength="2" maxlength="16" required />
+    <fieldset id="avatar-grid">
+      <legend>Pick an avatar</legend>
+      <label :for={avatar <- @avatars} class="inline-block m-1">
+        <input type="radio" name="avatar_id" value={avatar.id} required />
+        <.sprite cells={avatar.sprite_cells} />
+        <span class="text-xs">{avatar.name}</span>
+      </label>
+    </fieldset>
+    <button type="submit">Enter the lobby</button>
+  </form>
+  <footer id="data-notice" class="text-xs text-gray-500 pt-6">
+    Everything here lives in memory (ETS via Ash). You disappear when you disconnect.
+    Messages are wiped when the server restarts. Please don't post personal information.
+    <a href="https://github.com/mcass19/cbe_2026/blob/main/lobby_tui/docs/PRIVACY.md">
+      Privacy note
+    </a>
+  </footer>
+</div>
