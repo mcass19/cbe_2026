@@ -4,6 +4,10 @@
 - Slides in `slides_tui`
 - Game in `game_tui`
 
+## Talk link
+
+https://codebeameurope.com/talks/tuis-everywhere
+
 ## Video
 
 Will be posted here once released.
