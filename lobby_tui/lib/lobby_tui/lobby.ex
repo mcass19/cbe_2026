@@ -16,5 +16,13 @@ defmodule LobbyTui.Lobby do
       define :get_attendee, action: :read, get_by: :id
       define :leave, action: :leave, default_options: [return_destroyed?: true]
     end
+
+    resource LobbyTui.Lobby.Seat do
+      define :seed_seat, action: :seed
+      define :list_seats, action: :read
+      define :claim_seat, action: :claim
+      define :release_seat, action: :release
+      define :seat_of, action: :by_occupant, args: [:attendee_id]
+    end
   end
 end

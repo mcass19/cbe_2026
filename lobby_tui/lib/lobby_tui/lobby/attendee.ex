@@ -16,7 +16,8 @@ defmodule LobbyTui.Lobby.Attendee do
     end
 
     destroy :leave do
-      # Task 4 adds require_atomic? false + the FreeHeldSeat change here.
+      require_atomic? false
+      change LobbyTui.Lobby.Attendee.Changes.FreeHeldSeat
     end
   end
 
