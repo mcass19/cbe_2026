@@ -1,0 +1,50 @@
+defmodule LobbyTui.Lobby.AttendeeTest do
+  use ExUnit.Case, async: false
+
+  alias LobbyTui.Lobby
+
+  defp unique_nick, do: "nick_#{System.unique_integer([:positive])}"
+
+  defp seed_avatar! do
+    Lobby.seed_avatar!(%{
+      name: "test_#{System.unique_integer([:positive])}",
+      sprite_cells: [[{"▀", {:rgb, 1, 2, 3}, nil}]],
+      dominant_color: {:rgb, 1, 2, 3},
+      license: "CC0",
+      attribution: "test"
+    })
+  end
+
+  test "join creates an attendee linked to an avatar" do
+    avatar = seed_avatar!()
+    nick = unique_nick()
+    assert {:ok, attendee} = Lobby.join(nick, avatar.id)
+    assert attendee.nickname == nick
+    assert attendee.avatar_id == avatar.id
+  end
+
+  test "join rejects a duplicate nickname" do
+    avatar = seed_avatar!()
+    nick = unique_nick()
+    assert {:ok, _} = Lobby.join(nick, avatar.id)
+    assert {:error, %Ash.Error.Invalid{}} = Lobby.join(nick, avatar.id)
+  end
+
+  test "join rejects nicknames outside 2..16 chars" do
+    avatar = seed_avatar!()
+    assert {:error, %Ash.Error.Invalid{}} = Lobby.join("x", avatar.id)
+    assert {:error, %Ash.Error.Invalid{}} = Lobby.join(String.duplicate("a", 17), avatar.id)
+  end
+
+  test "leave removes the attendee" do
+    avatar = seed_avatar!()
+    {:ok, attendee} = Lobby.join(unique_nick(), avatar.id)
+    assert {:ok, _} = Lobby.leave(attendee)
+    assert {:error, _} = Lobby.get_attendee(attendee.id)
+  end
+
+  test "list_avatars! returns seeded avatars" do
+    avatar = seed_avatar!()
+    assert Enum.any?(Lobby.list_avatars!(), &(&1.id == avatar.id))
+  end
+end

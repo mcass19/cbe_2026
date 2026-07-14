@@ -49,8 +49,7 @@ config :spark,
     "Ash.Domain": [section_order: [:resources, :policies, :authorization, :domain, :execution]]
   ]
 
-config :lobby_tui,
-  generators: [timestamp_type: :utc_datetime]
+config :lobby_tui, generators: [timestamp_type: :utc_datetime], ash_domains: [LobbyTui.Lobby]
 
 # Configures the endpoint
 config :lobby_tui, LobbyTuiWeb.Endpoint,
