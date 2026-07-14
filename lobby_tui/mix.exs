@@ -71,6 +71,9 @@ defmodule LobbyTui.MixProject do
       {:ash, "~> 3.0"},
       {:simple_sat, "~> 0.1"},
 
+      # sprites
+      {:ex_png, "~> 1.0"},
+
       # dev / test
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:lazy_html, ">= 0.1.0", only: :test},

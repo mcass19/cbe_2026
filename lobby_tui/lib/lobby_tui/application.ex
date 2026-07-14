@@ -13,6 +13,7 @@ defmodule LobbyTui.Application do
       {Phoenix.PubSub, name: LobbyTui.PubSub},
       LobbyTui.SeatKeeper,
       LobbyTui.RateLimiter,
+      LobbyTui.SpriteLoader,
       # Start a worker by calling: LobbyTui.Worker.start_link(arg)
       # {LobbyTui.Worker, arg},
       # Start to serve requests, typically the last entry

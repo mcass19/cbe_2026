@@ -13,6 +13,8 @@ defmodule LobbyTui.Lobby.Avatar do
 
     create :seed do
       accept [:name, :sprite_cells, :dominant_color, :license, :attribution]
+      upsert? true
+      upsert_identity :unique_name
     end
   end
 
@@ -28,5 +30,9 @@ defmodule LobbyTui.Lobby.Avatar do
     attribute :dominant_color, :term, allow_nil?: false
     attribute :license, :string
     attribute :attribution, :string
+  end
+
+  identities do
+    identity :unique_name, [:name], pre_check_with: LobbyTui.Lobby
   end
 end
