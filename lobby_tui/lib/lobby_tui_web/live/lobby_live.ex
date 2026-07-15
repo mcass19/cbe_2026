@@ -16,7 +16,7 @@ defmodule LobbyTuiWeb.LobbyLive do
       end
 
       seated? = match?({:ok, _}, LobbyTui.Lobby.seat_of(attendee.id))
-      {:ok, assign(socket, attendee: attendee, seated?: seated?)}
+      {:ok, assign(socket, attendee: attendee, seated?: seated?, chat_seq: 0)}
     else
       _missing_or_stale -> {:ok, redirect(socket, to: ~p"/")}
     end
@@ -25,21 +25,34 @@ defmodule LobbyTuiWeb.LobbyLive do
   @impl true
   def render(assigns) do
     ~H"""
+    <div
+      id="reconnect-banner"
+      class="fixed top-0 inset-x-0 z-50 hidden bg-amber-100 text-amber-900 text-xs text-center py-1"
+      phx-disconnected={JS.show(to: "#reconnect-banner")}
+      phx-connected={JS.hide(to: "#reconnect-banner")}
+    >
+      connection lost — reconnecting
+    </div>
+
     <div id="lobby-shell" class="mx-auto max-w-2xl p-2 flex flex-col gap-2">
       <header id="lobby-header" class="flex justify-between text-sm">
         <span>TUIs everywhere — the lobby</span>
         <a href="https://github.com/mcass19/cbe_2026">source</a>
       </header>
 
-      <.live_component module={TheatreComponent} id="theatre" attendee={@attendee} />
+      <div id="theatre-wrap" class="h-[70vh] min-h-[24rem]">
+        <.live_component module={TheatreComponent} id="theatre" attendee={@attendee} />
+      </div>
 
       <form :if={@seated?} id="chat-form" phx-submit="say" class="flex gap-2">
         <input
-          id="chat-input"
+          id={"chat-input-#{@chat_seq}"}
           name="body"
           type="text"
           maxlength="200"
           autocomplete="off"
+          autofocus
+          enterkeyhint="send"
           placeholder="say something to the room"
           class="flex-1"
         />
@@ -47,11 +60,47 @@ defmodule LobbyTuiWeb.LobbyLive do
       </form>
 
       <div id="d-pad" class="flex justify-center gap-2 select-none">
-        <button phx-click="dpad" phx-value-dir="left">◄</button>
-        <button phx-click="dpad" phx-value-dir="up">▲</button>
-        <button phx-click="dpad" phx-value-dir="down">▼</button>
-        <button phx-click="dpad" phx-value-dir="right">►</button>
-        <button id="sit-button" phx-click="dpad" phx-value-dir="s">sit</button>
+        <button
+          class="min-w-12 min-h-12 p-2"
+          style="touch-action: manipulation;"
+          phx-click="dpad"
+          phx-value-dir="left"
+        >
+          ◄
+        </button>
+        <button
+          class="min-w-12 min-h-12 p-2"
+          style="touch-action: manipulation;"
+          phx-click="dpad"
+          phx-value-dir="up"
+        >
+          ▲
+        </button>
+        <button
+          class="min-w-12 min-h-12 p-2"
+          style="touch-action: manipulation;"
+          phx-click="dpad"
+          phx-value-dir="down"
+        >
+          ▼
+        </button>
+        <button
+          class="min-w-12 min-h-12 p-2"
+          style="touch-action: manipulation;"
+          phx-click="dpad"
+          phx-value-dir="right"
+        >
+          ►
+        </button>
+        <button
+          id="sit-button"
+          class="min-w-12 min-h-12 p-2"
+          style="touch-action: manipulation;"
+          phx-click="dpad"
+          phx-value-dir="s"
+        >
+          sit
+        </button>
       </div>
 
       <footer id="data-notice" class="text-xs text-gray-500">
@@ -79,7 +128,10 @@ defmodule LobbyTuiWeb.LobbyLive do
 
       trimmed ->
         send_update(TheatreComponent, id: "theatre", tui_say: trimmed)
-        {:noreply, socket}
+        # Bumping chat_seq changes the chat input's DOM id, so LiveView
+        # mounts a brand-new (empty) input instead of morphing the old one —
+        # the simplest way to clear the field after send without a JS hook.
+        {:noreply, update(socket, :chat_seq, &(&1 + 1))}
     end
   end
 

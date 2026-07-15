@@ -13,7 +13,7 @@ defmodule LobbyTui.Theatre do
   def mount(opts) do
     attendee = Keyword.fetch!(opts, :attendee)
     color = avatar_color(attendee)
-    state = State.new(attendee, color)
+    state = %{State.new(attendee, color) | allow_quit?: Keyword.get(opts, :quit?, false)}
 
     state =
       if Keyword.get(opts, :connect?, true) do
@@ -36,6 +36,14 @@ defmodule LobbyTui.Theatre do
 
   def handle_event(%Key{code: code, kind: "press"}, state) when code in ["s", "enter"] do
     {:noreply, try_sit(state)}
+  end
+
+  # Quit is opt-in via the `quit?: true` mount option (set by `LobbyTui.Local`
+  # for the real-terminal transport). The browser embed never passes it, so a
+  # stray "q" typed into the room from a browser tab cannot kill the
+  # LiveComponent's TUI process.
+  def handle_event(%Key{code: "q", kind: "press"}, %State{allow_quit?: true} = state) do
+    {:stop, state}
   end
 
   def handle_event(_event, state), do: {:noreply, state}

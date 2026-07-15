@@ -10,7 +10,7 @@ The live demo room for the Code BEAM Europe 2026 talk "TUIs everywhere." A small
 
 ```
 cd lobby_tui
-env -u EX_RATATUI_BUILD iex -S mix
+iex -S mix
 ```
 
 then, at the `iex>` prompt:
@@ -19,7 +19,7 @@ then, at the `iex>` prompt:
 LobbyTui.Local.run("speaker")
 ```
 
-This joins the same room as any browser attendee, using the same PubSub/Presence backbone, so people in the browser and people on a terminal see each other move in real time. `LobbyTui.Local.run/2` blocks until the terminal session ends (window closed, process killed), then leaves the room immediately rather than waiting out the disconnect grace period.
+This joins the same room as any browser attendee, using the same PubSub/Presence backbone, so people in the browser and people on a terminal see each other move in real time. Press `q` to leave. `LobbyTui.Local.run/2` blocks until the terminal session ends (`q`, window closed, process killed), then leaves the room immediately rather than waiting out the disconnect grace period.
 
 ## How it works
 
@@ -39,7 +39,7 @@ This app started from Igniter, not `phx.new` directly:
 
 ```
 cd cbe_2026
-env -u EX_RATATUI_BUILD mix igniter.new lobby_tui --with phx.new --with-args="--no-ecto" --install ash,ash_phoenix --no-git --yes
+mix igniter.new lobby_tui --with phx.new --with-args="--no-ecto" --install ash,ash_phoenix --no-git --yes
 ```
 
 `phoenix_ex_ratatui` was added to `mix.exs` by hand and wired into `assets/js/app.js` as a LiveSocket hook.
@@ -47,25 +47,25 @@ env -u EX_RATATUI_BUILD mix igniter.new lobby_tui --with phx.new --with-args="--
 The Ash domain and resources were generated with `ash.gen.*`, then hand-edited for actions, policies, and calculations:
 
 ```
-env -u EX_RATATUI_BUILD mix ash.gen.domain LobbyTui.Lobby --yes
+mix ash.gen.domain LobbyTui.Lobby --yes
 
-env -u EX_RATATUI_BUILD mix ash.gen.resource LobbyTui.Lobby.Avatar \
+mix ash.gen.resource LobbyTui.Lobby.Avatar \
   --uuid-primary-key id \
   --attribute name:string:required:public,license:string,attribution:string \
   --extend ets --default-actions read --yes
 
-env -u EX_RATATUI_BUILD mix ash.gen.resource LobbyTui.Lobby.Attendee \
+mix ash.gen.resource LobbyTui.Lobby.Attendee \
   --uuid-primary-key id \
   --attribute nickname:string:required:public \
   --relationship belongs_to:avatar:LobbyTui.Lobby.Avatar:required \
   --extend ets --default-actions read --yes
 
-env -u EX_RATATUI_BUILD mix ash.gen.resource LobbyTui.Lobby.Seat \
+mix ash.gen.resource LobbyTui.Lobby.Seat \
   --uuid-primary-key id \
   --attribute row:integer:required,col:integer:required,x:integer:required,y:integer:required \
   --extend ets --default-actions read --yes
 
-env -u EX_RATATUI_BUILD mix ash.gen.resource LobbyTui.Lobby.Message \
+mix ash.gen.resource LobbyTui.Lobby.Message \
   --uuid-primary-key id \
   --attribute body:string:required:public \
   --extend ets --yes
@@ -89,7 +89,7 @@ Sprites are 12x12 transparent PNGs dropped into `priv/sprites_src/`. The full co
 
 ```
 mix setup
-env -u EX_RATATUI_BUILD mix phx.server
+mix phx.server
 ```
 
 Then visit `localhost:4000`.
@@ -99,10 +99,10 @@ For the local-terminal transport instead of (or alongside) the browser, see "Loc
 ## Tests
 
 ```
-env -u EX_RATATUI_BUILD mix test
+mix test
 ```
 
-`env -u EX_RATATUI_BUILD mix precommit` runs the same checks used before every commit: compile with warnings as errors, drop unused deps, format, and test.
+`mix precommit` runs the same checks used before every commit: compile with warnings as errors, drop unused deps, format, and test.
 
 ## Deploying
 

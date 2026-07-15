@@ -1,19 +1,31 @@
 <div class="mx-auto max-w-md p-4">
   <h1 class="text-2xl font-bold">TUIs everywhere — the lobby</h1>
   <p :if={@error} id="join-error" class="text-red-600 py-2">{@error}</p>
-  <form id="join-form" action={~p"/join"} method="post">
+  <form id="join-form" action={~p"/join"} method="post" class="flex flex-col gap-3 pt-2">
     <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
-    <label for="nickname">Nickname</label>
-    <input id="nickname" name="nickname" type="text" minlength="2" maxlength="16" required />
-    <fieldset id="avatar-grid">
-      <legend>Pick an avatar</legend>
-      <label :for={avatar <- @avatars} class="inline-block m-1">
-        <input type="radio" name="avatar_id" value={avatar.id} required />
-        <.sprite cells={avatar.sprite_cells} />
-        <span class="text-xs">{avatar.name}</span>
+    <div>
+      <label for="nickname" class="block text-sm">Nickname</label>
+      <input
+        id="nickname"
+        name="nickname"
+        type="text"
+        minlength="2"
+        maxlength="16"
+        required
+        class="border rounded px-2 py-1 w-full"
+      />
+    </div>
+    <fieldset id="avatar-grid" class="border rounded p-2">
+      <legend class="text-sm px-1">Pick an avatar</legend>
+      <label :for={avatar <- @avatars} class="group inline-block m-1 cursor-pointer">
+        <input type="radio" name="avatar_id" value={avatar.id} required class="peer sr-only" />
+        <div class="rounded p-1 border border-transparent peer-checked:border-blue-500 peer-checked:ring-2 peer-checked:ring-blue-500">
+          <.sprite cells={avatar.sprite_cells} />
+          <span class="block text-xs text-center">{avatar.name}</span>
+        </div>
       </label>
     </fieldset>
-    <button type="submit">Enter the lobby</button>
+    <button type="submit" class="border rounded px-3 py-2 self-start">Enter the lobby</button>
   </form>
   <footer id="data-notice" class="text-xs text-gray-500 pt-6">
     Everything here lives in memory (ETS via Ash). You disappear when you disconnect.

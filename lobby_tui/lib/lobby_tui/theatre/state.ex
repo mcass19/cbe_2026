@@ -14,7 +14,8 @@ defmodule LobbyTui.Theatre.State do
             seated?: false,
             hint: nil,
             connected?: false,
-            refresh_pending?: false
+            refresh_pending?: false,
+            allow_quit?: false
 
   def new(attendee, color) do
     %__MODULE__{attendee: attendee, pos: World.spawn_point(), color: color}

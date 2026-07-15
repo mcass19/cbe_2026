@@ -112,7 +112,9 @@ defmodule LobbyTuiWeb.LobbyLiveTest do
     {:ok, view, _html} = live(conn, ~p"/lobby")
 
     assert has_element?(view, "#lobby-header")
+    assert has_element?(view, "#theatre-wrap")
     assert has_element?(view, "#theatre")
+    assert has_element?(view, "#reconnect-banner")
     assert has_element?(view, "#d-pad")
     assert has_element?(view, "#sit-button")
     assert has_element?(view, "#data-notice")
@@ -135,6 +137,7 @@ defmodule LobbyTuiWeb.LobbyLiveTest do
     # The LV subscribes to lobby:seats and reveals the chat form on its own
     # claim broadcast, settled by dpad_click's sync.
     assert has_element?(view, "#chat-form")
+    assert has_element?(view, "#chat-input-0")
 
     view
     |> form("#chat-form", %{"body" => "hello from the web"})
@@ -147,6 +150,13 @@ defmodule LobbyTuiWeb.LobbyLiveTest do
 
     {:ok, [message | _]} = LobbyTui.Lobby.stage_feed(actor: attendee)
     assert message.body == "hello from the web"
+
+    # LobbyLive bumps :chat_seq on every send, so the chat input's DOM id
+    # changes and LiveView mounts a brand-new (empty) input rather than
+    # morphing the old one — the field clears without a JS hook.
+    refute has_element?(view, "#chat-input-0")
+    assert has_element?(view, "#chat-input-1")
+    refute view |> element("#chat-input-1") |> render() =~ "hello from the web"
   end
 
   test "d-pad click does not crash and returns the view", %{conn: conn} do

@@ -30,9 +30,9 @@ Chat messages persist only in memory for the lifetime of the server process — 
 
 ## Deleting data
 
-Any attendee can delete their own posted messages during their session — the same interface used to post is used to remove.
+There is no self-service delete button. During the session, a request to remove a posted message can be made to the operator running the room, who can remove it from the moderation console (see "Moderation" below).
 
-After a session ends there is no self-service path, since the row identifying "which messages were whose" no longer exists by then. For anything else — a request to confirm no residual copy exists, a question about a specific message seen during the talk, or similar — reach the controller at the address below.
+After a session ends there is no path to identify which messages belonged to a given attendee, since the row linking them together no longer exists by then. For anything else — a request to confirm no residual copy exists, a question about a specific message seen during the talk, or similar — reach the controller at the address below.
 
 ## Moderation
 

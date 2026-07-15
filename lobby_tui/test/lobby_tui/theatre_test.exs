@@ -110,4 +110,14 @@ defmodule LobbyTui.TheatreTest do
     state = mount!()
     assert press(state, "z") == state
   end
+
+  test "\"q\" stops the session only when quit? is set" do
+    quittable = mount!(quit?: true)
+    assert {:stop, _state} = Theatre.handle_event(%Key{code: "q", kind: "press"}, quittable)
+
+    not_quittable = mount!()
+
+    assert {:noreply, ^not_quittable} =
+             Theatre.handle_event(%Key{code: "q", kind: "press"}, not_quittable)
+  end
 end
