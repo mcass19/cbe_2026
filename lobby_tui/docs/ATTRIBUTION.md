@@ -14,3 +14,4 @@ Community PRs replacing or adding sprites should append a row to the table below
 | sky.png | this repository | `priv/scripts/gen_placeholder_sprites.exs` | CC0 |
 | violet.png | this repository | `priv/scripts/gen_placeholder_sprites.exs` | CC0 |
 | rose.png | this repository | `priv/scripts/gen_placeholder_sprites.exs` | CC0 |
+| priv/scene/theatre.png | this repository | `priv/scripts/gen_placeholder_scene.exs` | CC0 |

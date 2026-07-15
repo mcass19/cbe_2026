@@ -1,20 +1,18 @@
 defmodule LobbyTui.World do
   @moduledoc """
-  The fixed 60×30 world grid: border walls, a stage band at the top, ten rows of twelve seats, and an open lobby band at the bottom. Purely static — all functions are deterministic lookups used by `Theatre` (render, movement) and by seat seeding.
+  The fixed 176×96 world grid (sprite scale: a 12×12px avatar spans 12 cols × 6 cell rows): border walls, a stage band at the top, ten rows of twelve seats, and an open lobby band at the bottom. Purely static — all functions are deterministic lookups used by `Theatre` (render, movement) and by seat seeding.
   """
 
-  @width 60
-  @height 30
-  @seat_rows [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
-  @seats (for {y, row} <- Enum.with_index(@seat_rows, 1),
-              col <- 1..12 do
-            %{row: row, col: col, x: 5 + (col - 1) * 4, y: y}
+  @width 176
+  @height 96
+  @seats (for row <- 1..10, col <- 1..12 do
+            %{row: row, col: col, x: 10 + (col - 1) * 14, y: 18 + (row - 1) * 7}
           end)
   @seat_index Map.new(@seats, &{{&1.x, &1.y}, &1})
 
   def width, do: @width
   def height, do: @height
-  def spawn_point, do: {30, 27}
+  def spawn_point, do: {88, 88}
   def seats, do: @seats
 
   def seat_at(pos), do: Map.get(@seat_index, pos)
@@ -23,7 +21,7 @@ defmodule LobbyTui.World do
 
   def tile_at({x, y}) when x > 0 and x < @width - 1 and y > 0 and y < @height - 1 do
     cond do
-      y in 1..3 -> :stage
+      y in 2..13 -> :stage
       Map.has_key?(@seat_index, {x, y}) -> :seat
       true -> :floor
     end
