@@ -103,3 +103,27 @@
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
 /* This file is for your main application CSS */
+
+/* Terminal chrome palette (pixtuoid restyle, design doc D5). Both pages are
+   HTML chrome around an embedded ratatui canvas, so the whole page reads as
+   one terminal: near-black background, light-gray body text, amber accent,
+   dim gray secondary text, mid-gray borders. These variables are set at
+   `:root` unconditionally — a terminal has one look, so this is
+   deliberately not scoped under `[data-theme=...]`. The generated
+   light/dark theme toggle (`LobbyTuiWeb.Layouts.theme_toggle/1`, wired up
+   in root.html.heex) is left in place for any future non-terminal page; it
+   is simply not consulted here. */
+:root {
+  --tui-bg: #0d1117;
+  --tui-fg: #c9d1d9;
+  --tui-dim: #6e7681;
+  --tui-accent: #e3b341;
+  --tui-accent-tint: rgb(227 179 65 / 15%);
+  --tui-border: #484f58;
+}
+
+body {
+  background-color: var(--tui-bg);
+  color: var(--tui-fg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}

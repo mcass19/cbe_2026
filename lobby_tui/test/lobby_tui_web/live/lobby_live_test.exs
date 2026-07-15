@@ -131,6 +131,32 @@ defmodule LobbyTuiWeb.LobbyLiveTest do
     refute has_element?(view, "#chat-form")
   end
 
+  test "the keybinding status bar shows the unseated hint, then swaps on sit/stand", %{
+    conn: conn
+  } do
+    {conn, _attendee} = join_conn(conn)
+    {:ok, view, _html} = live(conn, ~p"/lobby")
+    tui = boot_transport(view)
+
+    assert has_element?(view, "#key-bar", "[↑↓←→] move")
+    assert has_element?(view, "#key-bar", "[s] sit")
+    assert has_element?(view, "#key-bar", "walk onto a seat")
+    refute has_element?(view, "#key-bar", "[space] stand")
+
+    for dir <- path_to(free_seat!()), do: dpad_click(view, tui, dir)
+    sit_button_click(view, tui)
+
+    assert has_element?(view, "#key-bar", "[space] stand")
+    assert has_element?(view, "#key-bar", "[enter] send")
+    assert has_element?(view, "#key-bar", "seated")
+    refute has_element?(view, "#key-bar", "[s] sit")
+
+    sit_button_click(view, tui)
+
+    assert has_element?(view, "#key-bar", "[↑↓←→] move")
+    refute has_element?(view, "#key-bar", "[space] stand")
+  end
+
   test "d-pad clicks and sitting reveal the chat form; posting shows the message", %{conn: conn} do
     {conn, attendee} = join_conn(conn)
     {:ok, view, _html} = live(conn, ~p"/lobby")

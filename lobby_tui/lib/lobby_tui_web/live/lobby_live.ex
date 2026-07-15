@@ -27,7 +27,7 @@ defmodule LobbyTuiWeb.LobbyLive do
     ~H"""
     <div
       id="reconnect-banner"
-      class="fixed top-0 inset-x-0 z-50 hidden bg-amber-100 text-amber-900 text-xs text-center py-1"
+      class="fixed top-0 inset-x-0 z-50 hidden bg-[var(--tui-accent)] text-black text-xs text-center py-1"
       phx-disconnected={JS.show(to: "#reconnect-banner")}
       phx-connected={JS.hide(to: "#reconnect-banner")}
     >
@@ -35,33 +35,59 @@ defmodule LobbyTuiWeb.LobbyLive do
     </div>
 
     <div id="lobby-shell" class="mx-auto max-w-2xl p-2 flex flex-col gap-2">
-      <header id="lobby-header" class="flex justify-between text-sm">
-        <span>TUIs everywhere — the lobby</span>
-        <a href="https://github.com/mcass19/cbe_2026">source</a>
+      <header
+        id="lobby-header"
+        class="flex justify-between items-center border border-[var(--tui-border)] px-3 py-1 text-sm text-[var(--tui-accent)]"
+      >
+        <span>LobbyTui — Code BEAM Europe 2026</span>
+        <a href="https://github.com/mcass19/cbe_2026" class="hover:underline">[source]</a>
       </header>
 
-      <div id="theatre-wrap" class="h-[70vh] min-h-[24rem]">
+      <div id="theatre-wrap" class="h-[70vh] min-h-[24rem] bg-[var(--tui-bg)]">
         <.live_component module={TheatreComponent} id="theatre" attendee={@attendee} />
       </div>
 
+      <div
+        id="key-bar"
+        class="border border-[var(--tui-border)] px-3 py-1 text-xs text-[var(--tui-dim)]"
+      >
+        <%= if @seated? do %>
+          <kbd class="text-[var(--tui-accent)]">[space]</kbd>
+          stand · <kbd class="text-[var(--tui-accent)]">[enter]</kbd>
+          send · seated
+        <% else %>
+          <kbd class="text-[var(--tui-accent)]">[↑↓←→]</kbd>
+          move · <kbd class="text-[var(--tui-accent)]">[s]</kbd>
+          sit · walk onto a seat
+        <% end %>
+      </div>
+
       <form :if={@seated?} id="chat-form" phx-submit="say" class="flex gap-2">
-        <input
-          id={"chat-input-#{@chat_seq}"}
-          name="body"
-          type="text"
-          maxlength="200"
-          autocomplete="off"
-          autofocus
-          enterkeyhint="send"
-          placeholder="say something to the room"
-          class="flex-1"
-        />
-        <button type="submit">send</button>
+        <div class="flex flex-1 items-center gap-2 border border-[var(--tui-border)] px-2 py-1">
+          <span class="text-[var(--tui-accent)]">&gt;</span>
+          <input
+            id={"chat-input-#{@chat_seq}"}
+            name="body"
+            type="text"
+            maxlength="200"
+            autocomplete="off"
+            autofocus
+            enterkeyhint="send"
+            placeholder="say something to the room"
+            class="flex-1 border-0 bg-transparent text-[var(--tui-fg)] outline-none placeholder:text-[var(--tui-dim)] caret-[var(--tui-accent)]"
+          />
+        </div>
+        <button
+          type="submit"
+          class="border border-[var(--tui-border)] px-3 py-1 text-[var(--tui-fg)] hover:border-[var(--tui-accent)] hover:text-[var(--tui-accent)]"
+        >
+          send
+        </button>
       </form>
 
       <div id="d-pad" class="flex justify-center gap-2 select-none">
         <button
-          class="min-w-12 min-h-12 p-2"
+          class="min-w-12 min-h-12 p-2 border border-[var(--tui-border)] text-[var(--tui-fg)] active:border-[var(--tui-accent)] active:text-[var(--tui-accent)]"
           style="touch-action: manipulation;"
           phx-click="dpad"
           phx-value-dir="left"
@@ -69,7 +95,7 @@ defmodule LobbyTuiWeb.LobbyLive do
           ◄
         </button>
         <button
-          class="min-w-12 min-h-12 p-2"
+          class="min-w-12 min-h-12 p-2 border border-[var(--tui-border)] text-[var(--tui-fg)] active:border-[var(--tui-accent)] active:text-[var(--tui-accent)]"
           style="touch-action: manipulation;"
           phx-click="dpad"
           phx-value-dir="up"
@@ -77,7 +103,7 @@ defmodule LobbyTuiWeb.LobbyLive do
           ▲
         </button>
         <button
-          class="min-w-12 min-h-12 p-2"
+          class="min-w-12 min-h-12 p-2 border border-[var(--tui-border)] text-[var(--tui-fg)] active:border-[var(--tui-accent)] active:text-[var(--tui-accent)]"
           style="touch-action: manipulation;"
           phx-click="dpad"
           phx-value-dir="down"
@@ -85,7 +111,7 @@ defmodule LobbyTuiWeb.LobbyLive do
           ▼
         </button>
         <button
-          class="min-w-12 min-h-12 p-2"
+          class="min-w-12 min-h-12 p-2 border border-[var(--tui-border)] text-[var(--tui-fg)] active:border-[var(--tui-accent)] active:text-[var(--tui-accent)]"
           style="touch-action: manipulation;"
           phx-click="dpad"
           phx-value-dir="right"
@@ -94,7 +120,7 @@ defmodule LobbyTuiWeb.LobbyLive do
         </button>
         <button
           id="sit-button"
-          class="min-w-12 min-h-12 p-2"
+          class="min-w-12 min-h-12 p-2 border border-[var(--tui-border)] text-[var(--tui-fg)] active:border-[var(--tui-accent)] active:text-[var(--tui-accent)]"
           style="touch-action: manipulation;"
           phx-click="dpad"
           phx-value-dir={if @seated?, do: " ", else: "s"}
@@ -103,10 +129,16 @@ defmodule LobbyTuiWeb.LobbyLive do
         </button>
       </div>
 
-      <footer id="data-notice" class="text-xs text-gray-500">
+      <footer
+        id="data-notice"
+        class="text-xs text-[var(--tui-dim)] border-t border-[var(--tui-border)] pt-2"
+      >
         Everything here lives in memory (ETS via Ash). You disappear when you disconnect.
         Messages are wiped when the server restarts. Please don't post personal information.
-        <a href="https://github.com/mcass19/cbe_2026/blob/main/lobby_tui/docs/PRIVACY.md">
+        <a
+          href="https://github.com/mcass19/cbe_2026/blob/main/lobby_tui/docs/PRIVACY.md"
+          class="underline"
+        >
           Privacy note
         </a>
       </footer>
