@@ -36,6 +36,39 @@ defmodule LobbyTui.TheatreTest do
     assert state.color == {:rgb, 9, 9, 9}
   end
 
+  # 2 fully transparent top rows (every cell {" ", nil, nil}) over an opaque
+  # bottom row — the avatar cache must carry the leading-transparent-row
+  # count so the render compositor can hug the label to the sprite's
+  # visible pixels instead of floating it a fixed 6 rows above the anchor.
+  @top_trim_sprite [
+    [{" ", nil, nil}, {" ", nil, nil}],
+    [{" ", nil, nil}, {" ", nil, nil}],
+    [{"█", :cyan, nil}, {"█", :cyan, nil}]
+  ]
+
+  test "avatar cache entries carry the leading-transparent-row trim" do
+    avatar =
+      Lobby.seed_avatar!(%{
+        name: "trimmed_#{System.unique_integer([:positive])}",
+        sprite_cells: @top_trim_sprite,
+        dominant_color: {:rgb, 1, 2, 3},
+        license: "CC0",
+        attribution: "test"
+      })
+
+    attendee = Lobby.join!("trim_#{System.unique_integer([:positive])}", avatar.id)
+    {:ok, state} = Theatre.mount(attendee: attendee, connect?: false)
+
+    assert %{top_trim: 2} = state.avatar_cache[avatar.id]
+  end
+
+  test "an avatar with empty sprite cells caches a zero trim" do
+    state = mount!()
+    avatar_id = state.attendee.avatar_id
+
+    assert %{top_trim: 0} = state.avatar_cache[avatar_id]
+  end
+
   test "arrow keys move; walls block" do
     state = mount!()
     {x, y} = state.pos

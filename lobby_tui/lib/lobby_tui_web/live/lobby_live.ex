@@ -34,22 +34,22 @@ defmodule LobbyTuiWeb.LobbyLive do
       connection lost — reconnecting
     </div>
 
-    <div id="lobby-shell" class="mx-auto max-w-2xl p-2 flex flex-col gap-2">
+    <div id="lobby-shell" class="h-dvh overflow-hidden flex flex-col gap-2 p-2">
       <header
         id="lobby-header"
-        class="flex justify-between items-center border border-[var(--tui-border)] px-3 py-1 text-sm text-[var(--tui-accent)]"
+        class="shrink-0 flex justify-between items-center border border-[var(--tui-border)] px-3 py-1 text-sm text-[var(--tui-accent)]"
       >
         <span>LobbyTui — Code BEAM Europe 2026</span>
         <a href="https://github.com/mcass19/cbe_2026" class="hover:underline">[source]</a>
       </header>
 
-      <div id="theatre-wrap" class="h-[70vh] min-h-[24rem] bg-[var(--tui-bg)]">
+      <div id="theatre-wrap" class="flex-1 min-h-0 bg-[var(--tui-bg)]">
         <.live_component module={TheatreComponent} id="theatre" attendee={@attendee} />
       </div>
 
       <div
         id="key-bar"
-        class="border border-[var(--tui-border)] px-3 py-1 text-xs text-[var(--tui-dim)]"
+        class="shrink-0 border border-[var(--tui-border)] px-3 py-1 text-xs text-[var(--tui-dim)]"
       >
         <%= if @seated? do %>
           <kbd class="text-[var(--tui-accent)]">[space]</kbd>
@@ -62,7 +62,7 @@ defmodule LobbyTuiWeb.LobbyLive do
         <% end %>
       </div>
 
-      <form :if={@seated?} id="chat-form" phx-submit="say" class="flex gap-2">
+      <form :if={@seated?} id="chat-form" phx-submit="say" class="shrink-0 flex gap-2">
         <div class="flex flex-1 items-center gap-2 border border-[var(--tui-border)] px-2 py-1">
           <span class="text-[var(--tui-accent)]">&gt;</span>
           <input
@@ -85,7 +85,7 @@ defmodule LobbyTuiWeb.LobbyLive do
         </button>
       </form>
 
-      <div id="d-pad" class="flex justify-center gap-2 select-none">
+      <div id="d-pad" class="shrink-0 flex justify-center gap-2 select-none">
         <button
           class="min-w-12 min-h-12 p-2 border border-[var(--tui-border)] text-[var(--tui-fg)] active:border-[var(--tui-accent)] active:text-[var(--tui-accent)]"
           style="touch-action: manipulation;"
@@ -131,7 +131,7 @@ defmodule LobbyTuiWeb.LobbyLive do
 
       <footer
         id="data-notice"
-        class="text-xs text-[var(--tui-dim)] border-t border-[var(--tui-border)] pt-2"
+        class="shrink-0 text-[11px] leading-tight text-[var(--tui-dim)] border-t border-[var(--tui-border)] pt-1"
       >
         Everything here lives in memory (ETS via Ash). You disappear when you disconnect.
         Messages are wiped when the server restarts. Please don't post personal information.

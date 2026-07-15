@@ -20,9 +20,10 @@ defmodule LobbyTui.Theatre.State do
 
   @doc """
   Builds fresh state at the spawn point. `avatar_cache` is the boot-static
-  `%{avatar_id => %{cells:, color:}}` map (plus a `:fallback` entry) built
-  once by `LobbyTui.Theatre` at mount and consulted by the render
-  compositor; it defaults to empty for callers that do not render sprites.
+  `%{avatar_id => %{cells:, color:, top_trim:}}` map (plus a `:fallback`
+  entry) built once by `LobbyTui.Theatre` at mount and consulted by the
+  render compositor; it defaults to empty for callers that do not render
+  sprites.
   """
   def new(attendee, color, avatar_cache \\ %{}) do
     %__MODULE__{

@@ -214,18 +214,37 @@ defmodule LobbyTui.Theatre do
   # Avatars are boot-static (seeded once by `SpriteLoader`, never mutated by
   # attendees), so the cache is built once at mount and never refreshed —
   # the render compositor is a pure lookup against it, never an Ash call.
+  # `top_trim` (the count of leading fully transparent cell rows) is
+  # computed here, once per avatar, so the render compositor can hug name
+  # labels to a sprite's visible pixels without any added per-frame cost.
   defp build_avatar_cache do
     avatars = Lobby.list_avatars!()
-    cache = Map.new(avatars, &{&1.id, %{cells: &1.sprite_cells, color: &1.dominant_color}})
+    cache = Map.new(avatars, &{&1.id, avatar_cache_entry(&1)})
 
     case Enum.find(avatars, &(&1.name == "unknown")) do
       nil ->
         cache
 
       fallback ->
-        Map.put(cache, :fallback, %{cells: fallback.sprite_cells, color: fallback.dominant_color})
+        Map.put(cache, :fallback, avatar_cache_entry(fallback))
     end
   end
+
+  defp avatar_cache_entry(avatar) do
+    %{
+      cells: avatar.sprite_cells,
+      color: avatar.dominant_color,
+      top_trim: top_trim(avatar.sprite_cells)
+    }
+  end
+
+  defp top_trim(cells) do
+    Enum.reduce_while(cells, 0, fn row, count ->
+      if transparent_row?(row), do: {:cont, count + 1}, else: {:halt, count}
+    end)
+  end
+
+  defp transparent_row?(row), do: Enum.all?(row, &(&1 == {" ", nil, nil}))
 
   defp avatar_color(attendee, avatar_cache) do
     case Map.get(avatar_cache, attendee.avatar_id) || Map.get(avatar_cache, :fallback) do

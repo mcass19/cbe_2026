@@ -1,6 +1,6 @@
 defmodule LobbyTui.Theatre.Render do
   @moduledoc """
-  Pure rendering: state plus frame in, `{widget, rect}` pairs out. The world is a Paragraph of styled spans cropped by a camera that follows the attendee. Per visible cell the compositor layers, back to front: the painted theatre scene, an occupied-seat tint for seats whose occupant is not currently visible, avatar sprites (others first, self last), and floating name labels (others first, self last) — see design doc section D3. The stage feed takes the bottom band once seated; the last line is a one-row status strip (hint or seated/unseated help text).
+  Pure rendering: state plus frame in, `{widget, rect}` pairs out. The world is a Paragraph of styled spans cropped by a camera that follows the attendee. Per visible cell the compositor layers, back to front: the painted theatre scene, an occupied-seat tint for seats whose occupant is not currently visible, avatar sprites (others first, self last), and floating name labels (others first, self last) — see design doc section D3. The stage feed takes the bottom band once seated; the last line is a one-row status strip that shows the current hint, if any, and is otherwise blank — the HTML `#key-bar` chrome around the embed already carries the always-on move/sit/stand help.
   """
 
   alias ExRatatui.Frame
@@ -106,7 +106,7 @@ defmodule LobbyTui.Theatre.Render do
           {:ok, other} ->
             entry = sprite_entry(other.avatar_id, state.avatar_cache)
             ovl = paint_anchor(ovl, entry, {x, y}, other.color, x_range, y_range, :other)
-            {ovl, [{other, {x, y}} | found]}
+            {ovl, [{other, {x, y}, entry} | found]}
 
           :error ->
             {ovl, found}
@@ -182,17 +182,28 @@ defmodule LobbyTui.Theatre.Render do
   # -- labels --------------------------------------------------------
 
   defp paint_other_labels(overlay, found, x_range, y_range) do
-    Enum.reduce(found, overlay, fn {other, pos}, ovl ->
-      paint_label(ovl, other.nickname, pos, other.color, false, x_range, y_range)
+    Enum.reduce(found, overlay, fn {other, pos, entry}, ovl ->
+      paint_label(ovl, other.nickname, pos, other.color, false, x_range, y_range, entry)
     end)
   end
 
   defp paint_self_label(overlay, %State{} = state, x_range, y_range) do
-    paint_label(overlay, state.attendee.nickname, state.pos, state.color, true, x_range, y_range)
+    entry = sprite_entry(state.attendee.avatar_id, state.avatar_cache)
+
+    paint_label(
+      overlay,
+      state.attendee.nickname,
+      state.pos,
+      state.color,
+      true,
+      x_range,
+      y_range,
+      entry
+    )
   end
 
-  defp paint_label(overlay, nickname, {x, _y} = pos, color, self?, x_range, y_range) do
-    row = label_row(pos)
+  defp paint_label(overlay, nickname, {x, _y} = pos, color, self?, x_range, y_range, entry) do
+    row = label_row(pos, entry)
 
     if row in y_range do
       chars = String.graphemes(nickname)
@@ -213,7 +224,19 @@ defmodule LobbyTui.Theatre.Render do
     end
   end
 
-  defp label_row({_x, y}), do: y - @label_offset
+  # No cache entry at all: the anchor paints as a 1-cell marker sitting
+  # directly on `pos` (see `paint_anchor/7`'s nil-entry clause), so the
+  # label goes directly above that single cell, not the sprite pitch.
+  defp label_row({_x, y}, nil), do: y - 1
+
+  # `top_trim` (the avatar cache's precomputed count of leading fully
+  # transparent sprite rows, see `LobbyTui.Theatre.build_avatar_cache/0`)
+  # hugs the label to the sprite's visible pixels. Clamped to `y - 1` so a
+  # degenerate (fully transparent) sprite never pushes the label below the
+  # anchor's own row.
+  defp label_row({_x, y}, entry) do
+    min(y - @label_offset + Map.get(entry, :top_trim, 0), y - 1)
+  end
 
   defp label_start(x, len) do
     (x - div(len, 2)) |> max(0) |> min(max(World.width() - len, 0))
@@ -277,14 +300,11 @@ defmodule LobbyTui.Theatre.Render do
     %Paragraph{text: %Text{lines: [header | lines]}}
   end
 
-  defp status_paragraph(%State{hint: hint} = state) do
-    text =
-      cond do
-        hint -> hint
-        state.seated? -> "seated — type below to post"
-        true -> "arrows to move · walk onto a seat and press sit"
-      end
-
-    %Paragraph{text: text, style: %Style{fg: :dark_gray}}
+  # Hints only — the always-on unseated/seated help text used to live here
+  # too, but it duplicated the HTML `#key-bar` (owner screenshot feedback).
+  # The row itself stays even with no hint, empty, for layout stability:
+  # hints must not shift the world.
+  defp status_paragraph(%State{hint: hint}) do
+    %Paragraph{text: hint || "", style: %Style{fg: :dark_gray}}
   end
 end

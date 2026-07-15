@@ -129,6 +129,61 @@ defmodule LobbyTui.Theatre.RenderTest do
     assert cell(lines, 82, 44) == %Span{content: "d", style: %Style{fg: :cyan}}
   end
 
+  test "name label hugs a sprite with transparent top rows" do
+    cache =
+      Map.put(@avatar_cache, "av", %{cells: @fixture_sprite, color: {:rgb, 9, 9, 9}, top_trim: 2})
+
+    hugged = %{state({50, 50}) | avatar_cache: cache}
+
+    lines = Render.world_lines(hugged, 176, 96)
+    # label row = 50 - 6 + 2 = 46 (hugged 2 rows down from the unhugged 44)
+    assert cell(lines, 49, 46) == %Span{
+             content: "m",
+             style: %Style{fg: {:rgb, 9, 9, 9}, modifiers: [:bold]}
+           }
+  end
+
+  test "a zero-trim sprite's label position is unchanged at y - 6" do
+    cache =
+      Map.put(@avatar_cache, "av", %{cells: @fixture_sprite, color: {:rgb, 9, 9, 9}, top_trim: 0})
+
+    unhugged = %{state({50, 50}) | avatar_cache: cache}
+
+    lines = Render.world_lines(unhugged, 176, 96)
+
+    assert cell(lines, 49, 44) == %Span{
+             content: "m",
+             style: %Style{fg: {:rgb, 9, 9, 9}, modifiers: [:bold]}
+           }
+  end
+
+  test "a fully-transparent (degenerate) sprite clamps its label to y - 1" do
+    all_transparent = List.duplicate([{" ", nil, nil}], 6)
+
+    cache =
+      Map.put(@avatar_cache, "av", %{cells: all_transparent, color: {:rgb, 9, 9, 9}, top_trim: 6})
+
+    degenerate = %{state({50, 50}) | avatar_cache: cache}
+
+    lines = Render.world_lines(degenerate, 176, 96)
+    # naive y - 6 + 6 = 50 (the anchor row itself); clamped to 49 (y - 1)
+    assert cell(lines, 49, 49) == %Span{
+             content: "m",
+             style: %Style{fg: {:rgb, 9, 9, 9}, modifiers: [:bold]}
+           }
+  end
+
+  test "the 1-cell fallback marker's label sits directly above it, at y - 1" do
+    no_cache = %{state({88, 88}) | avatar_cache: %{}}
+    lines = Render.world_lines(no_cache, 176, 96)
+
+    # nickname "me" (len 2) centered on x=88: start = 88 - div(2, 2) = 87
+    assert cell(lines, 87, 87) == %Span{
+             content: "m",
+             style: %Style{fg: {:rgb, 9, 9, 9}, modifiers: [:bold]}
+           }
+  end
+
   test "name label clamps to world bounds at a world-edge anchor" do
     long = %{
       state({1, 50})
@@ -191,5 +246,23 @@ defmodule LobbyTui.Theatre.RenderTest do
     frame = %Frame{width: 60, height: 40}
     [_world, {status, _rect}] = Render.widgets(lined, frame)
     assert status.text =~ "seat taken"
+  end
+
+  # The status row now renders hints only — the always-on "arrows to
+  # move..."/"seated — type below to post" help text duplicated the HTML
+  # `#key-bar` (owner screenshot feedback item 4) and has been removed. The
+  # row itself stays (a blank row, for layout stability), unseated or
+  # seated, whenever no hint is set.
+  test "status line is empty (not help text) when unseated with no hint" do
+    frame = %Frame{width: 60, height: 40}
+    [_world, {status, _rect}] = Render.widgets(state(), frame)
+    assert status.text == ""
+  end
+
+  test "status line is empty (not help text) when seated with no hint" do
+    frame = %Frame{width: 60, height: 40}
+    seated = %{state() | seated?: true}
+    [_world, {_feed, _}, {status, _rect}] = Render.widgets(seated, frame)
+    assert status.text == ""
   end
 end
