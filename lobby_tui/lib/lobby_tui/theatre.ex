@@ -34,9 +34,23 @@ defmodule LobbyTui.Theatre do
   def render(state, frame), do: Render.widgets(state, frame)
 
   @impl true
+  def handle_event(%Key{code: code, kind: "press"}, %State{seated?: true} = state)
+      when code in ["up", "down", "left", "right"] do
+    {:noreply, State.hint(state, "press space to stand")}
+  end
+
   def handle_event(%Key{code: code, kind: "press"}, state)
       when code in ["up", "down", "left", "right"] do
     {:noreply, state |> State.step(String.to_existing_atom(code)) |> broadcast_position()}
+  end
+
+  def handle_event(%Key{code: " ", kind: "press"}, %State{seated?: true} = state) do
+    {:noreply, try_stand(state)}
+  end
+
+  def handle_event(%Key{code: code, kind: "press"}, %State{seated?: true} = state)
+      when code in ["s", "enter"] do
+    {:noreply, State.hint(state, "press space to stand")}
   end
 
   def handle_event(%Key{code: code, kind: "press"}, state) when code in ["s", "enter"] do
@@ -94,7 +108,7 @@ defmodule LobbyTui.Theatre do
       if is_nil(seat.occupant_id) do
         Map.delete(state.occupied, {seat.x, seat.y})
       else
-        Map.put(state.occupied, {seat.x, seat.y}, seat.occupant_id)
+        Map.put(state.occupied, {seat.x, seat.y}, occupant_entry(seat.occupant_id))
       end
 
     {:noreply, %{state | occupied: occupied}}
@@ -128,6 +142,19 @@ defmodule LobbyTui.Theatre do
     else
       nil -> State.hint(state, "walk onto a seat to sit")
       {:error, _taken} -> State.hint(state, "seat taken — try another")
+    end
+  end
+
+  # Space, while seated: releases the held seat via `Lobby.stand`. Unseated
+  # attendees hold no feed (see `handle_info` for `"lobby:stage"`, which
+  # only ever appends to a seated attendee's feed), so standing clears it
+  # to mirror that invariant rather than leaving a stale snapshot around.
+  defp try_stand(%State{attendee: attendee} = state) do
+    with {:ok, seat} <- Lobby.seat_of(attendee.id),
+         {:ok, _} <- Lobby.stand(seat, actor: attendee) do
+      %{state | seated?: false, feed: []} |> State.hint(nil)
+    else
+      _ -> state
     end
   end
 
@@ -166,6 +193,24 @@ defmodule LobbyTui.Theatre do
     Enum.find(Lobby.list_seats!(), &(&1.x == x and &1.y == y))
   end
 
+  # Fetches the occupant's Presence color once, event-time (a seat claim
+  # broadcast, or once per occupied seat at connect), rather than on every
+  # render — the render compositor only ever does a pure map lookup against
+  # `state.occupied`. An occupant not yet tracked in Presence (a narrow
+  # window right after a claim, before their own `track_attendee` lands)
+  # falls back to `:red`, same as the stored fallback the render tint used
+  # before this map carried color at all.
+  defp occupant_entry(occupant_id) do
+    %{id: occupant_id, color: fetch_presence_color(occupant_id)}
+  end
+
+  defp fetch_presence_color(occupant_id) do
+    case LobbyTui.Presence.get_by_key(LobbyTui.Presence.topic(), occupant_id) do
+      %{metas: [meta | _]} -> Map.get(meta, :color, :red)
+      _not_tracked -> :red
+    end
+  end
+
   # Avatars are boot-static (seeded once by `SpriteLoader`, never mutated by
   # attendees), so the cache is built once at mount and never refreshed —
   # the render compositor is a pure lookup against it, never an Ash call.
@@ -198,7 +243,7 @@ defmodule LobbyTui.Theatre do
     occupied =
       Lobby.list_seats!()
       |> Enum.reject(&is_nil(&1.occupant_id))
-      |> Map.new(&{{&1.x, &1.y}, &1.occupant_id})
+      |> Map.new(&{{&1.x, &1.y}, occupant_entry(&1.occupant_id)})
 
     state = %{
       state

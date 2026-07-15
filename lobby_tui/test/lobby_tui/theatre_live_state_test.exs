@@ -37,12 +37,38 @@ defmodule LobbyTui.TheatreLiveStateTest do
 
     assert_receive %Phoenix.Socket.Broadcast{topic: "lobby:seats"} = broadcast
     {:noreply, state} = Theatre.handle_info(broadcast, state)
-    assert state.occupied[{seat.x, seat.y}] == other.id
+    # `other` never mounted a Theatre (never tracked in Presence), so the
+    # color lookup misses and the entry stores the fallback.
+    assert state.occupied[{seat.x, seat.y}] == %{id: other.id, color: :red}
 
     _ = Lobby.release_seat!(claimed)
     assert_receive %Phoenix.Socket.Broadcast{topic: "lobby:seats"} = release_broadcast
     {:noreply, state} = Theatre.handle_info(release_broadcast, state)
     refute Map.has_key?(state.occupied, {seat.x, seat.y})
+  end
+
+  test "a seat broadcast for a tracked occupant stores their real presence color" do
+    state = mount_connected!()
+    tracked = mount_connected!()
+    seat = Enum.find(Lobby.list_seats!(), &is_nil(&1.occupant_id))
+    {:ok, _claimed} = Lobby.claim_seat(seat, actor: tracked.attendee)
+
+    assert_receive %Phoenix.Socket.Broadcast{topic: "lobby:seats"} = broadcast
+    {:noreply, state} = Theatre.handle_info(broadcast, state)
+    assert state.occupied[{seat.x, seat.y}] == %{id: tracked.attendee.id, color: tracked.color}
+  end
+
+  test "connect's initial occupancy load stores the occupant's presence color" do
+    holder = mount_connected!()
+    seat = Enum.find(Lobby.list_seats!(), &is_nil(&1.occupant_id))
+    {:ok, _} = Lobby.claim_seat(seat, actor: holder.attendee)
+
+    late_joiner = mount_connected!()
+
+    assert late_joiner.occupied[{seat.x, seat.y}] == %{
+             id: holder.attendee.id,
+             color: holder.color
+           }
   end
 
   test "remounting while still holding a seat (refresh/reconnect) comes up seated with a loaded feed" do

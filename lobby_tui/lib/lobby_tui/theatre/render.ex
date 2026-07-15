@@ -229,28 +229,15 @@ defmodule LobbyTui.Theatre.Render do
   # filtered to the viewport before any work happens.
   defp paint_tints(overlay, %State{} = state, x_range, y_range) do
     state.occupied
-    |> Enum.filter(fn {pos, _occupant_id} -> in_ranges?(pos, x_range, y_range) end)
-    |> Enum.reject(fn {pos, _occupant_id} -> anchored?(state, pos) end)
-    |> Enum.reduce(overlay, fn {pos, occupant_id}, ovl ->
-      Map.put(ovl, pos, %Span{
-        content: @occupancy_marker,
-        style: %Style{fg: tint_color(state, occupant_id)}
-      })
+    |> Enum.filter(fn {pos, _occupant} -> in_ranges?(pos, x_range, y_range) end)
+    |> Enum.reject(fn {pos, _occupant} -> anchored?(state, pos) end)
+    |> Enum.reduce(overlay, fn {pos, %{color: color}}, ovl ->
+      Map.put(ovl, pos, %Span{content: @occupancy_marker, style: %Style{fg: color}})
     end)
   end
 
   defp anchored?(%State{pos: pos}, seat_pos) when pos == seat_pos, do: true
   defp anchored?(%State{others_by_pos: others}, seat_pos), do: Map.has_key?(others, seat_pos)
-
-  # By construction this only runs when nobody is anchored on the seat, so
-  # the occupant can only ever be "findable" as self (still holding the
-  # seat but not yet repositioned there); a genuine other occupant with no
-  # visible sprite has no id-indexed lookup available (`others_by_pos` is
-  # keyed by position, not attendee id) and falls back to red.
-  defp tint_color(%State{attendee: %{id: id}, color: color}, occupant_id) when occupant_id == id,
-    do: color
-
-  defp tint_color(_state, _occupant_id), do: :red
 
   # -- scene ---------------------------------------------------------------
 

@@ -35,6 +35,12 @@ defmodule LobbyTui.Lobby.Seat do
       require_atomic? false
       change set_attribute(:occupant_id, nil)
     end
+
+    update :stand do
+      accept []
+      require_atomic? false
+      change LobbyTui.Lobby.Seat.Changes.ReleaseIfOwn
+    end
   end
 
   pub_sub do
@@ -43,6 +49,7 @@ defmodule LobbyTui.Lobby.Seat do
 
     publish :claim, "seats"
     publish :release, "seats"
+    publish :stand, "seats"
   end
 
   attributes do

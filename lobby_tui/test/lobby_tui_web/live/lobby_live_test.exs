@@ -41,6 +41,16 @@ defmodule LobbyTuiWeb.LobbyLiveTest do
     :ok
   end
 
+  # `#sit-button`'s `phx-value-dir` toggles between "s" and a literal space
+  # once seated — a space is not a valid unquoted CSS attribute value, so
+  # this clicks it by id rather than by `dpad_click`'s attribute selector.
+  defp sit_button_click(view, tui) do
+    view |> element("#sit-button") |> render_click()
+    _ = :sys.get_state(view.pid)
+    _ = :sys.get_state(tui.server)
+    :ok
+  end
+
   # `LobbyTui.Lobby` runs on the ETS data layer with no per-test sandbox, so
   # seats claimed by other test files in the same suite run stay claimed for
   # the rest of the run. Pick whichever seat is free *right now* and walk
@@ -157,6 +167,28 @@ defmodule LobbyTuiWeb.LobbyLiveTest do
     refute has_element?(view, "#chat-input-0")
     assert has_element?(view, "#chat-input-1")
     refute view |> element("#chat-input-1") |> render() =~ "hello from the web"
+  end
+
+  test "the sit button becomes a stand button once seated, and frees the seat when clicked", %{
+    conn: conn
+  } do
+    {conn, attendee} = join_conn(conn)
+    {:ok, view, _html} = live(conn, ~p"/lobby")
+    tui = boot_transport(view)
+
+    assert has_element?(view, "#sit-button", "sit")
+
+    for dir <- path_to(free_seat!()), do: dpad_click(view, tui, dir)
+    sit_button_click(view, tui)
+
+    assert has_element?(view, "#chat-form")
+    assert has_element?(view, "#sit-button", "stand")
+
+    sit_button_click(view, tui)
+
+    refute has_element?(view, "#chat-form")
+    assert has_element?(view, "#sit-button", "sit")
+    assert {:error, _} = LobbyTui.Lobby.seat_of(attendee.id)
   end
 
   test "d-pad click does not crash and returns the view", %{conn: conn} do

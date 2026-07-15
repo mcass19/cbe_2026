@@ -143,9 +143,17 @@ defmodule LobbyTui.Theatre.RenderTest do
            }
   end
 
-  test "an occupied seat with no sprite anchored on it shows the tint marker" do
+  test "an occupied seat with no sprite anchored on it shows the tint marker in the stored color" do
     seat = {10, 18}
-    occupied = %{state({88, 88}) | occupied: %{seat => "someone-else"}}
+    occupied = %{state({88, 88}) | occupied: %{seat => %{id: "someone-else", color: :magenta}}}
+
+    lines = Render.world_lines(occupied, 176, 96)
+    assert cell(lines, 10, 18) == %Span{content: "▪", style: %Style{fg: :magenta}}
+  end
+
+  test "an occupied seat's tint falls back to the stored fallback color, not a per-frame default" do
+    seat = {10, 18}
+    occupied = %{state({88, 88}) | occupied: %{seat => %{id: "someone-else", color: :red}}}
 
     lines = Render.world_lines(occupied, 176, 96)
     assert cell(lines, 10, 18) == %Span{content: "▪", style: %Style{fg: :red}}
@@ -153,7 +161,7 @@ defmodule LobbyTui.Theatre.RenderTest do
 
   test "an occupied seat with the occupant's sprite on it shows the sprite, not the marker" do
     seat = {10, 18}
-    occupied = %{state(seat) | occupied: %{seat => "self"}}
+    occupied = %{state(seat) | occupied: %{seat => %{id: "self", color: {:rgb, 9, 9, 9}}}}
 
     lines = Render.world_lines(occupied, 176, 96)
     # anchor at {10, 18}, sprite 2x2 -> left = 10, top = 17; (10, 18) is the opaque anchor cell

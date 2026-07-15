@@ -106,6 +106,53 @@ defmodule LobbyTui.TheatreTest do
     assert limited.hint =~ "slow down"
   end
 
+  test "seated + arrow key does not move, hints to stand" do
+    state = mount!()
+    seat = fresh_free_seat!()
+    seated = press(%{state | pos: {seat.x, seat.y}}, "s")
+    assert seated.seated?
+
+    moved = press(seated, "up")
+    assert moved.pos == seated.pos
+    assert moved.hint =~ "press space to stand"
+  end
+
+  test "seated + space frees the seat, clears seated? and the feed" do
+    state = mount!()
+    seat = fresh_free_seat!()
+    seated = press(%{state | pos: {seat.x, seat.y}}, "s")
+    assert seated.seated?
+
+    {:noreply, after_say} = Theatre.handle_info({:say, "hi"}, seated)
+    assert after_say.feed != []
+
+    stood = press(after_say, " ")
+    refute stood.seated?
+    assert stood.feed == []
+    assert stood.hint == nil
+    assert {:error, _} = Lobby.seat_of(state.attendee.id)
+  end
+
+  test "unseated + space is a no-op" do
+    state = mount!()
+    assert press(state, " ") == state
+  end
+
+  test "seated + \"s\" hints to stand instead of re-claiming" do
+    state = mount!()
+    seat = fresh_free_seat!()
+    seated = press(%{state | pos: {seat.x, seat.y}}, "s")
+
+    {:ok, held_before} = Lobby.seat_of(state.attendee.id)
+
+    hinted = press(seated, "s")
+    assert hinted.seated?
+    assert hinted.hint =~ "press space to stand"
+
+    {:ok, held_after} = Lobby.seat_of(state.attendee.id)
+    assert held_before.id == held_after.id
+  end
+
   test "unknown keys are ignored" do
     state = mount!()
     assert press(state, "z") == state

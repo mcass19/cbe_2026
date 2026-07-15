@@ -97,9 +97,9 @@ defmodule LobbyTuiWeb.LobbyLive do
           class="min-w-12 min-h-12 p-2"
           style="touch-action: manipulation;"
           phx-click="dpad"
-          phx-value-dir="s"
+          phx-value-dir={if @seated?, do: " ", else: "s"}
         >
-          sit
+          {if @seated?, do: "stand", else: "sit"}
         </button>
       </div>
 
@@ -116,7 +116,7 @@ defmodule LobbyTuiWeb.LobbyLive do
 
   @impl true
   def handle_event("dpad", %{"dir" => dir}, socket)
-      when dir in ["up", "down", "left", "right", "s"] do
+      when dir in ["up", "down", "left", "right", "s", " "] do
     send_update(TheatreComponent, id: "theatre", tui_input: dir)
     {:noreply, socket}
   end

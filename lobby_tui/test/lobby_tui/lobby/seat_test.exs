@@ -88,4 +88,31 @@ defmodule LobbyTui.Lobby.SeatTest do
     refreshed = Enum.find(Lobby.list_seats!(), &(&1.id == seat.id))
     assert refreshed.occupant_id == nil
   end
+
+  test "stand releases the attendee's own seat" do
+    attendee = join!("stander")
+    seat = free_seat!()
+    {:ok, claimed} = Lobby.claim_seat(seat, actor: attendee)
+    assert {:ok, stood} = Lobby.stand(claimed, actor: attendee)
+    assert stood.occupant_id == nil
+    assert {:error, _} = Lobby.seat_of(attendee.id)
+  end
+
+  test "stand on someone else's seat errors and leaves it occupied" do
+    owner = join!("owner")
+    other = join!("bystander")
+    seat = free_seat!()
+    {:ok, claimed} = Lobby.claim_seat(seat, actor: owner)
+
+    assert {:error, _} = Lobby.stand(claimed, actor: other)
+    refreshed = Enum.find(Lobby.list_seats!(), &(&1.id == claimed.id))
+    assert refreshed.occupant_id == owner.id
+  end
+
+  test "stand without an actor errors" do
+    attendee = join!("noactor")
+    seat = free_seat!()
+    {:ok, claimed} = Lobby.claim_seat(seat, actor: attendee)
+    assert {:error, _} = Lobby.stand(claimed)
+  end
 end
