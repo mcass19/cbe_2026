@@ -1,6 +1,6 @@
 defmodule LobbyTui.Presence do
   @moduledoc """
-  Presence over `LobbyTui.PubSub`: one entry per attendee on `"lobby:presence"`, meta `%{nickname, color, x, y}`. This is the fast lane — positions update here on every step and never touch Ash.
+  Presence over `LobbyTui.PubSub`: one entry per attendee on `"lobby:presence"`, meta `%{nickname, color, avatar_id, x, y}`. This is the fast lane — positions update here on every step and never touch Ash.
   """
 
   use Phoenix.Presence, otp_app: :lobby_tui, pubsub_server: LobbyTui.PubSub
@@ -15,6 +15,7 @@ defmodule LobbyTui.Presence do
     track(self(), @topic, state.attendee.id, %{
       nickname: state.attendee.nickname,
       color: state.color,
+      avatar_id: state.attendee.avatar_id,
       x: x,
       y: y
     })
@@ -26,6 +27,7 @@ defmodule LobbyTui.Presence do
     update(self(), @topic, state.attendee.id, %{
       nickname: state.attendee.nickname,
       color: state.color,
+      avatar_id: state.attendee.avatar_id,
       x: x,
       y: y
     })
@@ -36,7 +38,7 @@ defmodule LobbyTui.Presence do
     |> list()
     |> Map.delete(attendee_id)
     |> Map.new(fn {id, %{metas: [meta | _]}} ->
-      {id, Map.take(meta, [:nickname, :color, :x, :y])}
+      {id, Map.take(meta, [:nickname, :color, :avatar_id, :x, :y])}
     end)
   end
 end

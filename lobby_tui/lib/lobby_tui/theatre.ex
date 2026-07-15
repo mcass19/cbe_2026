@@ -12,8 +12,13 @@ defmodule LobbyTui.Theatre do
   @impl true
   def mount(opts) do
     attendee = Keyword.fetch!(opts, :attendee)
-    color = avatar_color(attendee)
-    state = %{State.new(attendee, color) | allow_quit?: Keyword.get(opts, :quit?, false)}
+    avatar_cache = build_avatar_cache()
+    color = avatar_color(attendee, avatar_cache)
+
+    state = %{
+      State.new(attendee, color, avatar_cache)
+      | allow_quit?: Keyword.get(opts, :quit?, false)
+    }
 
     state =
       if Keyword.get(opts, :connect?, true) do
@@ -161,9 +166,25 @@ defmodule LobbyTui.Theatre do
     Enum.find(Lobby.list_seats!(), &(&1.x == x and &1.y == y))
   end
 
-  defp avatar_color(attendee) do
-    case Lobby.list_avatars!() |> Enum.find(&(&1.id == attendee.avatar_id)) do
-      %{dominant_color: color} -> color
+  # Avatars are boot-static (seeded once by `SpriteLoader`, never mutated by
+  # attendees), so the cache is built once at mount and never refreshed —
+  # the render compositor is a pure lookup against it, never an Ash call.
+  defp build_avatar_cache do
+    avatars = Lobby.list_avatars!()
+    cache = Map.new(avatars, &{&1.id, %{cells: &1.sprite_cells, color: &1.dominant_color}})
+
+    case Enum.find(avatars, &(&1.name == "unknown")) do
+      nil ->
+        cache
+
+      fallback ->
+        Map.put(cache, :fallback, %{cells: fallback.sprite_cells, color: fallback.dominant_color})
+    end
+  end
+
+  defp avatar_color(attendee, avatar_cache) do
+    case Map.get(avatar_cache, attendee.avatar_id) || Map.get(avatar_cache, :fallback) do
+      %{color: color} -> color
       nil -> {:rgb, 128, 128, 128}
     end
   end
