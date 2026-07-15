@@ -61,12 +61,12 @@ defmodule LobbyTui.Theatre.Render do
   defp cell_span(%State{pos: pos, color: color}, cell) when pos == cell,
     do: %Span{content: "@", style: %Style{fg: color, modifiers: [:bold]}}
 
-  defp cell_span(%State{} = state, {x, y} = cell) do
-    case Enum.find(state.others, fn {_id, o} -> o.x == x and o.y == y end) do
-      {_id, other} ->
+  defp cell_span(%State{} = state, cell) do
+    case Map.fetch(state.others_by_pos, cell) do
+      {:ok, other} ->
         %Span{content: "☻", style: %Style{fg: other.color || :white}}
 
-      nil ->
+      :error ->
         case World.tile_at(cell) do
           :wall -> @wall
           :stage -> @stage

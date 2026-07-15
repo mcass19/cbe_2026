@@ -49,7 +49,12 @@ defmodule LobbyTui.TheatreTest do
   test "another attendee's cell blocks movement" do
     state = mount!()
     {x, y} = state.pos
-    blocked = %{state | others: %{"other" => %{nickname: "o", color: nil, x: x, y: y - 1}}}
+
+    blocked = %{
+      state
+      | others_by_pos: %{{x, y - 1} => %{nickname: "o", color: nil, x: x, y: y - 1}}
+    }
+
     assert press(blocked, "up").pos == {x, y}
   end
 

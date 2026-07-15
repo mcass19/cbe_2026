@@ -70,6 +70,29 @@ defmodule LobbyTui.ReaperTest do
     assert %{} = :sys.get_state(reaper)
   end
 
+  test "a partial-leave diff does not reap an attendee still tracked in Presence" do
+    attendee = join!()
+    reaper = start_supervised!({LobbyTui.Reaper, grace_ms: 10, name: :test_reaper_e})
+
+    # Simulate a second connection for the same attendee id (longpoll→
+    # websocket swap, or a second tab): a live Presence entry stays tracked
+    # even though this diff reports the id as a leave.
+    {:ok, _ref} = LobbyTui.Presence.track(self(), LobbyTui.Presence.topic(), attendee.id, %{})
+
+    send(reaper, %Phoenix.Socket.Broadcast{
+      topic: "lobby:presence",
+      event: "presence_diff",
+      payload: %{joins: %{}, leaves: %{attendee.id => %{metas: []}}}
+    })
+
+    _ = :sys.get_state(reaper)
+    Process.sleep(50)
+
+    assert {:ok, _still_there} = Lobby.get_attendee(attendee.id)
+
+    LobbyTui.Presence.untrack(self(), LobbyTui.Presence.topic(), attendee.id)
+  end
+
   test "a stale reap message for an untracked id is ignored" do
     attendee = join!()
     reaper = start_supervised!({LobbyTui.Reaper, grace_ms: 10, name: :test_reaper_d})

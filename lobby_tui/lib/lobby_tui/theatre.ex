@@ -43,8 +43,31 @@ defmodule LobbyTui.Theatre do
   @impl true
   def handle_info({:say, body}, state), do: {:noreply, say(state, body)}
 
+  # Presence diffs arrive at up to one per attendee per movement step, and a
+  # naive handler would rebuild the full others index (and trigger a render)
+  # on every single one — at ~100 attendees that is hundreds of diffs per
+  # second. Coalesce instead: the first diff since the last refresh arms a
+  # 100 ms timer; further diffs before it fires are free (state is
+  # unchanged, so the runtime's per-message render stays on the cheap,
+  # already-indexed render path — see the ex_ratatui render-decision note
+  # in the fix-wave report). `:refresh_others` is the only place the index
+  # actually rebuilds, bounding rebuilds to at most 10/s regardless of
+  # fan-out.
+  def handle_info(
+        %Phoenix.Socket.Broadcast{event: "presence_diff"},
+        %State{refresh_pending?: true} = state
+      ) do
+    {:noreply, state}
+  end
+
   def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, state) do
-    {:noreply, %{state | others: LobbyTui.Presence.others(state.attendee.id)}}
+    Process.send_after(self(), :refresh_others, 100)
+    {:noreply, %{state | refresh_pending?: true}}
+  end
+
+  def handle_info(:refresh_others, state) do
+    others = LobbyTui.Presence.others(state.attendee.id)
+    {:noreply, %{state | others_by_pos: State.index_by_pos(others), refresh_pending?: false}}
   end
 
   def handle_info(
@@ -101,8 +124,21 @@ defmodule LobbyTui.Theatre do
   defp say(state, body) do
     case Lobby.post_message(body, actor: state.attendee) do
       {:ok, message} -> %{state | feed: Enum.take([message | state.feed], 50)}
-      {:error, %Ash.Error.Forbidden{}} -> State.hint(state, "slow down — 6 messages/min")
+      {:error, %Ash.Error.Forbidden{}} -> forbidden_hint(state)
       {:error, _invalid} -> State.hint(state, "message must be 1–200 chars")
+    end
+  end
+
+  # A Forbidden error from post_message is either the rate limit or a lost
+  # seat (reaped, or released from another tab) — re-check which happened
+  # so the hint tells the attendee the right thing to do.
+  defp forbidden_hint(state) do
+    case Lobby.seat_of(state.attendee.id) do
+      {:ok, _seat} ->
+        State.hint(state, "slow down — 6 messages/min")
+
+      {:error, _unseated} ->
+        %{state | seated?: false} |> State.hint("seat lost — sit again to post")
     end
   end
 
@@ -135,17 +171,30 @@ defmodule LobbyTui.Theatre do
       |> Enum.reject(&is_nil(&1.occupant_id))
       |> Map.new(&{{&1.x, &1.y}, &1.occupant_id})
 
-    %{
+    state = %{
       state
       | connected?: true,
-        others: LobbyTui.Presence.others(state.attendee.id),
+        others_by_pos: State.index_by_pos(LobbyTui.Presence.others(state.attendee.id)),
         occupied: occupied
     }
+
+    # A refresh/reconnect starts a brand-new Theatre state, but the attendee
+    # may still be holding a seat in Ash from before the reload — without
+    # this check the fresh state comes up unseated while the seat (and any
+    # LobbyLive chat form gated on it) says otherwise.
+    case Lobby.seat_of(state.attendee.id) do
+      {:ok, _seat} -> %{state | seated?: true} |> load_feed()
+      {:error, _unseated} -> state
+    end
   end
 
   defp broadcast_position(%State{connected?: true} = state) do
-    {:ok, _ref} = LobbyTui.Presence.move(state)
-    state
+    case LobbyTui.Presence.move(state) do
+      {:ok, _ref} -> state
+      # A reaped-then-moving edge: the attendee's presence entry is already
+      # gone, so there is nothing left to update.
+      {:error, _reason} -> state
+    end
   end
 
   defp broadcast_position(state), do: state

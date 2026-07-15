@@ -58,6 +58,14 @@ defmodule LobbyTui.Lobby.SeatTest do
     assert Enum.count(results, &match?({:ok, _}, &1)) == 1
   end
 
+  test "re-claiming one's own already-held seat succeeds (idempotent re-sit)" do
+    attendee = join!("resitter")
+    seat = free_seat!()
+    {:ok, _} = Lobby.claim_seat(seat, actor: attendee)
+    assert {:ok, reclaimed} = Lobby.claim_seat(seat, actor: attendee)
+    assert reclaimed.occupant_id == attendee.id
+  end
+
   test "claiming a second seat releases the first (moving seats)" do
     attendee = join!("mover")
     [seat_a, seat_b | _] = Enum.filter(Lobby.list_seats!(), &is_nil(&1.occupant_id))

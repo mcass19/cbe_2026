@@ -35,6 +35,18 @@ defmodule LobbyTui.Theatre.RenderTest do
     assert cell.(sy, sx).style.fg == {:rgb, 9, 9, 9}
   end
 
+  test "another attendee's indexed position renders as ☻" do
+    other = %{
+      state()
+      | others_by_pos: %{{10, 10} => %{nickname: "o", color: :cyan, x: 10, y: 10}}
+    }
+
+    lines = Render.world_lines(other, 60, 30)
+    cell = lines |> Enum.at(10) |> Map.fetch!(:spans) |> Enum.at(10)
+    assert cell.content == "☻"
+    assert cell.style.fg == :cyan
+  end
+
   test "occupied seats render differently from free seats" do
     occupied = %{state() | occupied: %{{5, 6} => "someone"}}
     lines = Render.world_lines(occupied, 60, 30)

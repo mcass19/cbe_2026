@@ -1,6 +1,6 @@
 defmodule LobbyTui.Lobby.Seat.Changes.ClaimIfFree do
   @moduledoc """
-  The conditional seat claim: filters the update on `occupant_id == nil` so a taken seat matches nothing and the claim errors instead of overwriting, then sets the occupant to the actor. An after-action releases any other seat the actor held, so moving seats is a single claim.
+  The conditional seat claim: filters the update on `occupant_id == nil or occupant_id == actor` so a taken seat matches nothing (the claim errors instead of overwriting) while re-claiming one's own seat is an idempotent no-op — refresh/reconnect calls this the same way as a fresh sit. Then sets the occupant to the actor. An after-action releases any other seat the actor held, so moving seats is a single claim.
 
   The ETS data layer checks that filter and writes the row as two separate,
   unlocked ETS operations, so two concurrent claimants can both pass the
@@ -20,7 +20,7 @@ defmodule LobbyTui.Lobby.Seat.Changes.ClaimIfFree do
   @impl true
   def change(changeset, _opts, %{actor: %{id: attendee_id}}) do
     changeset
-    |> Ash.Changeset.filter(expr(is_nil(occupant_id)))
+    |> Ash.Changeset.filter(expr(is_nil(occupant_id) or occupant_id == ^attendee_id))
     |> Ash.Changeset.force_change_attribute(:occupant_id, attendee_id)
     |> Ash.Changeset.after_action(fn _changeset, seat ->
       release_other_seats(seat, attendee_id)

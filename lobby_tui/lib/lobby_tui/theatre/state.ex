@@ -1,6 +1,6 @@
 defmodule LobbyTui.Theatre.State do
   @moduledoc """
-  The Theatre's in-process state: who we are, where we stand, everyone else's last known position (from Presence), seat occupancy, and the stage feed. Purely data plus pure transitions — every side effect (Ash calls, Presence updates) lives in `LobbyTui.Theatre`.
+  The Theatre's in-process state: who we are, where we stand, everyone else's last known position (from Presence, indexed by cell for O(1) lookups), seat occupancy, and the stage feed. Purely data plus pure transitions — every side effect (Ash calls, Presence updates) lives in `LobbyTui.Theatre`.
   """
 
   alias LobbyTui.World
@@ -8,12 +8,13 @@ defmodule LobbyTui.Theatre.State do
   defstruct attendee: nil,
             pos: {0, 0},
             color: nil,
-            others: %{},
+            others_by_pos: %{},
             occupied: %{},
             feed: [],
             seated?: false,
             hint: nil,
-            connected?: false
+            connected?: false,
+            refresh_pending?: false
 
   def new(attendee, color) do
     %__MODULE__{attendee: attendee, pos: World.spawn_point(), color: color}
@@ -37,7 +38,12 @@ defmodule LobbyTui.Theatre.State do
 
   def hint(state, text), do: %{state | hint: text}
 
-  defp occupied_by_other?(%__MODULE__{others: others}, {tx, ty}) do
-    Enum.any?(others, fn {_id, %{x: x, y: y}} -> x == tx and y == ty end)
+  @doc "Indexes a `%{id => %{x, y, ...}}` presence map by `{x, y}` cell for O(1) render/collision lookups."
+  def index_by_pos(others) do
+    Map.new(others, fn {_id, other} -> {{other.x, other.y}, other} end)
+  end
+
+  defp occupied_by_other?(%__MODULE__{others_by_pos: others_by_pos}, target) do
+    Map.has_key?(others_by_pos, target)
   end
 end

@@ -72,12 +72,18 @@ defmodule LobbyTuiWeb.LobbyLive do
     {:noreply, socket}
   end
 
-  def handle_event("say", %{"body" => body}, socket) when byte_size(body) > 0 do
-    send_update(TheatreComponent, id: "theatre", tui_say: body)
-    {:noreply, socket}
+  def handle_event("say", %{"body" => body}, socket) do
+    case String.trim(body) do
+      "" ->
+        {:noreply, socket}
+
+      trimmed ->
+        send_update(TheatreComponent, id: "theatre", tui_say: trimmed)
+        {:noreply, socket}
+    end
   end
 
-  def handle_event("say", _empty, socket), do: {:noreply, socket}
+  def handle_event("say", _no_body, socket), do: {:noreply, socket}
 
   @impl true
   def handle_info(

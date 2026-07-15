@@ -18,5 +18,19 @@ defmodule LobbyTui.SeatKeeper do
   def serialize(fun) when is_function(fun, 0), do: GenServer.call(__MODULE__, {:run, fun})
 
   @impl true
-  def handle_call({:run, fun}, _from, state), do: {:reply, fun.(), state}
+  def handle_call({:run, fun}, _from, state) do
+    # A raise inside a claim must not kill this singleton — every other
+    # in-flight and future claim funnels through it. Callers already handle
+    # `{:error, _}`, so a rescued exception degrades to an ordinary error
+    # reply instead of taking the process (and the whole serialization
+    # point) down.
+    result =
+      try do
+        fun.()
+      rescue
+        exception -> {:error, exception}
+      end
+
+    {:reply, result, state}
+  end
 end

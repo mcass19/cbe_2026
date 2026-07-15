@@ -45,6 +45,28 @@ defmodule LobbyTui.TheatreLiveStateTest do
     refute Map.has_key?(state.occupied, {seat.x, seat.y})
   end
 
+  test "remounting while still holding a seat (refresh/reconnect) comes up seated with a loaded feed" do
+    state = mount_connected!()
+    seat = Enum.find(Lobby.list_seats!(), &is_nil(&1.occupant_id))
+    {:ok, _} = Lobby.claim_seat(seat, actor: state.attendee)
+    assert_receive %Phoenix.Socket.Broadcast{topic: "lobby:seats"}
+
+    {:ok, _message} = Lobby.post_message("still here after refresh", actor: state.attendee)
+    assert_receive %Phoenix.Socket.Broadcast{topic: "lobby:stage"}
+
+    # A real refresh/reconnect spawns a brand-new process (new LiveView, new
+    # ExRatatui.Server) — mount from a separate process here too, since
+    # Presence.track/4 keys on the calling pid and a second track from the
+    # same pid for the same attendee id would collide with the first.
+    remounted =
+      Task.async(fn -> Theatre.mount(attendee: state.attendee, connect?: true) end)
+      |> Task.await()
+
+    assert {:ok, remounted} = remounted
+    assert remounted.seated?
+    assert Enum.any?(remounted.feed, &(&1.body == "still here after refresh"))
+  end
+
   test "a stage broadcast prepends to a seated attendee's feed and is ignored unseated" do
     state = mount_connected!()
     poster = Lobby.join!("post_#{System.unique_integer([:positive])}", state.attendee.avatar_id)

@@ -34,7 +34,13 @@ defmodule LobbyTui.Reaper do
   end
 
   def handle_info({:reap, attendee_id}, state) do
-    if Map.has_key?(state.timers, attendee_id) do
+    # An id can carry two Presence metas at once (longpoll→websocket swap, a
+    # second tab) — closing one connection alone emits the id in `leaves`
+    # while a meta is still tracked, scheduling a reap for an attendee who
+    # is, in fact, still connected. Re-check Presence directly (not just the
+    # timers map, which only tracks scheduling) immediately before reaping.
+    if Map.has_key?(state.timers, attendee_id) and
+         not Map.has_key?(LobbyTui.Presence.list(LobbyTui.Presence.topic()), attendee_id) do
       case LobbyTui.Lobby.get_attendee(attendee_id) do
         {:ok, attendee} -> LobbyTui.Lobby.leave(attendee)
         {:error, _already_gone} -> :ok
