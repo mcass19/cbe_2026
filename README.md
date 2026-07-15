@@ -2,7 +2,7 @@
 
 - TUIs in Goatmire's name badge: [#1](https://github.com/mcass19/name_badge/pull/1) & [#2](https://github.com/mcass19/name_badge/pull/2)
 - Slides in `slides_tui`
-- Game in `game_tui`
+- Lobby in `lobby_tui`
 
 ## Talk link
 
