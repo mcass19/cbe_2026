@@ -40,7 +40,9 @@ defmodule LobbyTuiWeb.LobbyLive do
         class="shrink-0 flex justify-between items-center border border-[var(--tui-border)] px-3 py-1 text-sm text-[var(--tui-accent)]"
       >
         <span>LobbyTui — Code BEAM Europe 2026</span>
-        <a href="https://github.com/mcass19/cbe_2026" class="hover:underline">[source]</a>
+        <a href="https://github.com/mcass19/cbe_2026/tree/main/lobby_tui" class="hover:underline">
+          [source]
+        </a>
       </header>
 
       <div id="theatre-wrap" class="flex-1 min-h-0 bg-[var(--tui-bg)]">
@@ -139,7 +141,7 @@ defmodule LobbyTuiWeb.LobbyLive do
           href="https://github.com/mcass19/cbe_2026/blob/main/lobby_tui/docs/PRIVACY.md"
           class="underline"
         >
-          Privacy note
+          Privacy note.
         </a>
       </footer>
     </div>

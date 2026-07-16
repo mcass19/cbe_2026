@@ -10,7 +10,7 @@ defmodule LobbyTui.Local do
   @doc """
   Joins the lobby as `nickname` and runs the Theatre TUI on the local terminal until the session ends (`q`, window closed, process killed, or a fatal render error), then leaves the lobby so the seat and presence entry are freed immediately rather than waiting out the disconnect grace period.
 
-  `avatar_name` picks a seeded avatar by name (the PNG filename minus the extension, e.g. `"crimson"`); when omitted, or when the name does not match any seeded avatar, one is picked at random.
+  `avatar_name` picks a seeded avatar by name (the PNG filename minus the extension, e.g. `"monk"`); when omitted, or when the name does not match any seeded avatar, one is picked at random.
 
   Passes `quit?: true` to `Theatre.mount/1` — press `q` to leave. This is a local-terminal-only affordance: the browser embed never sets it, so a stray "q" typed into the room from a browser tab cannot kill that attendee's TUI process.
   """

@@ -11,6 +11,11 @@ defmodule LobbyTui.Lobby.Avatar do
   actions do
     defaults [:read]
 
+    read :selectable do
+      description "Avatars offered on the join picker — everything but the built-in unknown fallback."
+      filter expr(name != "unknown")
+    end
+
     create :seed do
       accept [:name, :sprite_cells, :dominant_color, :license, :attribution]
       upsert? true

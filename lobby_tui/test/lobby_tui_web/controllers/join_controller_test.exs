@@ -18,6 +18,14 @@ defmodule LobbyTuiWeb.JoinControllerTest do
     assert html =~ "lives in memory"
   end
 
+  test "GET / does not offer the built-in unknown fallback avatar", %{conn: conn} do
+    unknown = Enum.find(LobbyTui.Lobby.list_avatars!(), &(&1.name == "unknown"))
+    html = conn |> get(~p"/") |> html_response(200)
+
+    refute html =~ unknown.id
+    refute "unknown" in Enum.map(LobbyTui.Lobby.selectable_avatars!(), & &1.name)
+  end
+
   # Regression for the sprite double-width/vanishing-cell bug: a newline
   # (or any whitespace) between two cell `<span>`s collapses to a visible
   # extra space under the browser's default `white-space: normal`, so the

@@ -2,7 +2,7 @@ defmodule LobbyTuiWeb.JoinController do
   use LobbyTuiWeb, :controller
 
   def new(conn, _params) do
-    render(conn, :new, avatars: LobbyTui.Lobby.list_avatars!(), error: nil)
+    render(conn, :new, avatars: LobbyTui.Lobby.selectable_avatars!(), error: nil)
   end
 
   def create(conn, %{"nickname" => nickname, "avatar_id" => avatar_id}) do
@@ -14,7 +14,7 @@ defmodule LobbyTuiWeb.JoinController do
 
       {:error, error} ->
         render(conn, :new,
-          avatars: LobbyTui.Lobby.list_avatars!(),
+          avatars: LobbyTui.Lobby.selectable_avatars!(),
           error: join_error_message(error)
         )
     end
@@ -22,7 +22,7 @@ defmodule LobbyTuiWeb.JoinController do
 
   def create(conn, _missing_params) do
     render(conn, :new,
-      avatars: LobbyTui.Lobby.list_avatars!(),
+      avatars: LobbyTui.Lobby.selectable_avatars!(),
       error: "pick a nickname and an avatar"
     )
   end

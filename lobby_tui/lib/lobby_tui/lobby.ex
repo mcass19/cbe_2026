@@ -9,6 +9,7 @@ defmodule LobbyTui.Lobby do
     resource LobbyTui.Lobby.Avatar do
       define :seed_avatar, action: :seed
       define :list_avatars, action: :read
+      define :selectable_avatars, action: :selectable
     end
 
     resource LobbyTui.Lobby.Attendee do

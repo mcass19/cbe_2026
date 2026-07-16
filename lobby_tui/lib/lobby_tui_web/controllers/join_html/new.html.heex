@@ -1,47 +1,55 @@
-<div class="mx-auto max-w-md p-4">
-  <h1 class="text-2xl font-bold text-[var(--tui-accent)] tracking-widest">
-    TUIs everywhere — the lobby
-  </h1>
+<div class="min-h-dvh p-4 flex flex-col">
+  <div class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+    <h1 class="text-2xl font-bold text-[var(--tui-accent)] tracking-widest">
+      TUIs everywhere — the lobby
+    </h1>
+    <a
+      href="https://github.com/mcass19/cbe_2026/tree/main/lobby_tui"
+      class="text-[var(--tui-dim)] hover:underline"
+    >
+      [source]
+    </a>
+  </div>
   <p :if={@error} id="join-error" class="text-red-400 py-2">{@error}</p>
   <form id="join-form" action={~p"/join"} method="post" class="flex flex-col gap-3 pt-2">
     <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
-    <div>
-      <label for="nickname" class="block text-sm text-[var(--tui-dim)]">Nickname</label>
-      <div class="flex items-center gap-2 border border-[var(--tui-border)] px-2 py-1">
-        <span class="text-[var(--tui-accent)]">&gt;</span>
-        <input
-          id="nickname"
-          name="nickname"
-          type="text"
-          minlength="2"
-          maxlength="16"
-          required
-          class="flex-1 border-0 bg-transparent text-[var(--tui-fg)] outline-none caret-[var(--tui-accent)]"
-        />
+    <div class="flex flex-col gap-3 max-w-xl sm:flex-row sm:items-end">
+      <div class="flex-1">
+        <label for="nickname" class="block text-sm text-[var(--tui-dim)]">Nickname</label>
+        <div class="flex items-center gap-2 border border-[var(--tui-border)] px-2 py-1">
+          <span class="text-[var(--tui-accent)]">&gt;</span>
+          <input
+            id="nickname"
+            name="nickname"
+            type="text"
+            minlength="2"
+            maxlength="16"
+            required
+            class="flex-1 border-0 bg-transparent text-[var(--tui-fg)] outline-none caret-[var(--tui-accent)]"
+          />
+        </div>
       </div>
+      <button
+        type="submit"
+        class="border border-[var(--tui-border)] px-3 py-1 text-[var(--tui-fg)] transition-colors hover:border-[var(--tui-accent)] hover:text-[var(--tui-accent)] whitespace-nowrap sm:w-auto"
+      >
+        Enter the lobby
+      </button>
     </div>
     <fieldset id="avatar-grid" class="border border-[var(--tui-border)] p-2">
       <legend class="text-sm px-1 text-[var(--tui-dim)]">Pick an avatar</legend>
       <label :for={avatar <- @avatars} class="group inline-block m-1 cursor-pointer">
         <input type="radio" name="avatar_id" value={avatar.id} required class="peer sr-only" />
-        <div class="p-1 border border-[var(--tui-border)] peer-checked:border-[var(--tui-accent)] peer-checked:bg-[var(--tui-accent-tint)]">
+        <div class="p-1 border border-[var(--tui-border)] transition-colors hover:border-[var(--tui-accent)] hover:bg-[var(--tui-accent-tint)] peer-checked:border-[var(--tui-accent)] peer-checked:bg-[var(--tui-accent-tint)] peer-checked:shadow-[0_0_0_1px_var(--tui-accent)]">
           <.sprite cells={avatar.sprite_cells} />
-          <span class="block text-xs text-center text-[var(--tui-dim)] peer-checked:text-[var(--tui-accent)]">
-            {avatar.name}
-          </span>
+          <span class="sr-only">{avatar.name}</span>
         </div>
       </label>
     </fieldset>
-    <button
-      type="submit"
-      class="border border-[var(--tui-border)] px-3 py-2 self-start text-[var(--tui-fg)] hover:border-[var(--tui-accent)] hover:text-[var(--tui-accent)]"
-    >
-      Enter the lobby
-    </button>
   </form>
   <footer
     id="data-notice"
-    class="text-xs text-[var(--tui-dim)] border-t border-[var(--tui-border)] pt-6"
+    class="mt-auto pt-4 text-center text-xs text-[var(--tui-dim)] border-t border-[var(--tui-border)]"
   >
     Everything here lives in memory (ETS via Ash). You disappear when you disconnect.
     Messages are wiped when the server restarts. Please don't post personal information.
@@ -49,7 +57,7 @@
       href="https://github.com/mcass19/cbe_2026/blob/main/lobby_tui/docs/PRIVACY.md"
       class="underline"
     >
-      Privacy note
+      Privacy note.
     </a>
   </footer>
 </div>
