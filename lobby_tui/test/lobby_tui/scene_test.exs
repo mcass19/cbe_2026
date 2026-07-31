@@ -20,9 +20,10 @@ defmodule LobbyTui.SceneTest do
     palette = PlaceholderScene.palette()
     curtain_colors = [rgb(palette.curtain_a), rgb(palette.curtain_b)]
 
-    # cell row 3 falls in the stage band (cell rows 2..13); col 30 sits well
-    # away from the trim/aisle margins.
-    assert {_char, fg, bg} = Scene.cell({30, 3})
+    # A row inside the drape, below the apron; col 30 sits well away from
+    # the trim and the aisle margins.
+    row = World.stage_rows().last - 1
+    assert {_char, fg, bg} = Scene.cell({30, row})
     assert fg in curtain_colors or bg in curtain_colors
   end
 
@@ -30,9 +31,10 @@ defmodule LobbyTui.SceneTest do
     palette = PlaceholderScene.palette()
     floor_colors = [rgb(palette.floor_a), rgb(palette.floor_b)]
 
-    # cell row 88 falls in the lobby band (cell rows 84..92); col 50 avoids
-    # the trim/aisle margins and the dither strip at the band's top edge.
-    assert {_char, fg, bg} = Scene.cell({50, 88})
+    # A row inside the lobby carpet, clear of the dithered edge that faces
+    # the seats; col 50 avoids the trim and aisle margins.
+    row = World.lobby_rows().first + 1
+    assert {_char, fg, bg} = Scene.cell({50, row})
     refute fg in floor_colors
     refute bg in floor_colors
   end

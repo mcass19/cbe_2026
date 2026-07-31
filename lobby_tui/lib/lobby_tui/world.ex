@@ -1,6 +1,17 @@
 defmodule LobbyTui.World do
   @moduledoc """
-  The fixed 176×96 world grid (sprite scale: a 12×12px avatar spans 12 cols × 6 cell rows): border walls, a stage band at the top, ten rows of twelve seats, and an open lobby band at the bottom. Purely static — all functions are deterministic lookups used by `Theatre` (render, movement) and by seat seeding.
+  The fixed 176×96 world grid (sprite scale: a 12×12px avatar spans 12 cols × 6 cell rows): border walls, a stage band at the bottom, ten rows of eight seats above it, and the lobby carpet at the far end. Purely static — all functions are deterministic lookups used by `Theatre` (render, movement), by the scene painter, and by seat seeding.
+
+  ## Which way the room faces
+
+  The stage is at the *bottom*. Seat art is drawn back-at-top,
+  base-at-bottom, so a seat reads as facing down the screen; with the
+  stage above them the whole audience appeared to have turned its back on
+  the show. Everything is laid out from the stage upwards instead: apron,
+  walkway, then row 1 (the front row, nearest the stage) climbing to row
+  10 at the back, and the lobby carpet last of all. Attendees spawn in the
+  walkway right at the apron, so the front rows fill first and the carpet
+  is somewhere to walk to rather than the place everyone lands.
 
   ## Seats are footprints, not points
 
@@ -24,18 +35,36 @@ defmodule LobbyTui.World do
   @width 176
   @height 96
 
+  # Bottom-up bands. The apron is the stage's leading edge and so sits at
+  # the top of the stage band, facing the house.
+  @stage_rows 82..93
+  @apron_rows 82..83
+  @walkway_rows 80..81
+  @lobby_rows 2..11
+
   # Cell offsets from a seat anchor to the block painted around it: 12
   # columns centred (slightly left-biased) on the anchor, and 5 rows rising
   # from the anchor's own row.
   @footprint_dx -6..5
   @footprint_dy -4..0
 
-  # Row 1's footprint starts two rows below the stage apron (which ends at
-  # row 13) rather than butting straight against it — a real house leaves
-  # a walkway in front of the front row, and the seated camera frames the
-  # stage with that gap and the first rows of seats in shot.
-  @seats (for row <- 1..10, col <- 1..12 do
-            %{row: row, col: col, x: 10 + (col - 1) * 14, y: 20 + (row - 1) * 7}
+  # Columns come from the original twelve-column lattice at a 14-column
+  # pitch, minus the two outermost and the two flanking the centre. What
+  # they leave behind is four seats per block and three proper carpeted
+  # aisles — a house, rather than a wall of chairs edge to edge.
+  @lattice_origin 10
+  @lattice_pitch 14
+  @kept_lattice_columns [2, 3, 4, 5, 8, 9, 10, 11]
+  @seat_x Enum.map(@kept_lattice_columns, &(@lattice_origin + (&1 - 1) * @lattice_pitch))
+
+  # Row 1 is the front row, hard against the walkway; rows climb away from
+  # the stage from there.
+  @front_row_y 79
+  @row_pitch 7
+  @row_count 10
+
+  @seats (for {x, index} <- Enum.with_index(@seat_x), row <- 1..@row_count do
+            %{row: row, col: index + 1, x: x, y: @front_row_y - (row - 1) * @row_pitch}
           end)
 
   @seat_footprint_index (for seat <- @seats,
@@ -49,8 +78,26 @@ defmodule LobbyTui.World do
 
   def width, do: @width
   def height, do: @height
-  def spawn_point, do: {88, 88}
   def seats, do: @seats
+
+  @doc "Cell rows of the stage band, apron included. Not walkable."
+  def stage_rows, do: @stage_rows
+
+  @doc "Cell rows of the stage's leading edge, at the top of the band."
+  def apron_rows, do: @apron_rows
+
+  @doc "Cell rows of the lobby carpet, at the far end of the house from the stage."
+  def lobby_rows, do: @lobby_rows
+
+  @doc """
+  Where attendees appear: the walkway at the foot of the stage, centred.
+
+  Deliberately not the lobby carpet. Landing at the far end meant the back
+  rows filled first and the stage was a long walk away; landing at the
+  apron puts the front rows within a step and makes the carpet somewhere
+  to wander off to.
+  """
+  def spawn_point, do: {div(@width, 2), @walkway_rows.last}
 
   @doc """
   The `{dx_range, dy_range}` cell offsets of a seat's painted block,
@@ -86,7 +133,7 @@ defmodule LobbyTui.World do
 
   def tile_at({x, y}) when x > 0 and x < @width - 1 and y > 0 and y < @height - 1 do
     cond do
-      y in 2..13 -> :stage
+      y in @stage_rows -> :stage
       Map.has_key?(@seat_footprint_index, {x, y}) -> :seat
       true -> :floor
     end

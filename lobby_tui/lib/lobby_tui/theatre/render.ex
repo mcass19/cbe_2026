@@ -17,19 +17,18 @@ defmodule LobbyTui.Theatre.Render do
 
   # -- stage ---------------------------------------------------------------
 
-  # The curtain rows of the painted stage band (rows 12..13 are the apron
-  # and stay put — an apron does not travel with the drape). The opening
-  # grows outward from the proscenium's centre line, which the scene's own
-  # symmetry axis puts at column 88.
-  @stage_curtain_rows 2..11
-  @stage_center_x 88
+  # The drape covers the stage band below the apron — an apron does not
+  # travel with the curtain, so it stays put. The opening grows outward
+  # from the proscenium's centre line.
+  @stage_curtain_rows (World.apron_rows().last + 1)..World.stage_rows().last
+  @stage_center_x div(176, 2)
 
   # Widest half-opening: out to the wall trim on either side.
   @stage_max_half 84
 
-  # Rows inside the opening reserved for the feed, newest last, leaving
-  # the top row of the opening as breathing space under the pelmet.
-  @stage_text_rows 4..11
+  # Rows inside the opening reserved for the feed, newest last, with a row
+  # of breathing space at each edge of the drape.
+  @stage_text_rows (World.apron_rows().last + 2)..(World.stage_rows().last - 1)
 
   @stage_interior {:rgb, 16, 10, 22}
   @stage_author {:rgb, 34, 206, 222}
@@ -87,15 +86,16 @@ defmodule LobbyTui.Theatre.Render do
   @doc """
   Where the viewport sits in the world.
 
-  Standing, it follows the attendee. Seated, it lifts to the stage and
+  Standing, it follows the attendee. Seated, it drops to the stage and
   stays there: the curtain is about to go up and the attendee is meant to
-  be watching it, not themselves. Anchoring at the top row also keeps the
-  front rows of the house in shot below the stage, so the room still
-  reads as occupied.
+  be watching it, not themselves. The stage sits along the bottom of the
+  world, so anchoring at the last row frames it with the front rows of the
+  house above, and the room still reads as occupied.
   """
-  def viewport_origin(%State{seated?: true}, vw, _vh) do
+  def viewport_origin(%State{seated?: true}, vw, vh) do
     max_ox = max(World.width() - vw, 0)
-    {(@stage_center_x - div(vw, 2)) |> max(0) |> min(max_ox), 0}
+    max_oy = max(World.height() - vh, 0)
+    {(@stage_center_x - div(vw, 2)) |> max(0) |> min(max_ox), max_oy}
   end
 
   def viewport_origin(%State{pos: pos}, vw, vh), do: camera(pos, vw, vh)

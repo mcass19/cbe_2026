@@ -270,8 +270,8 @@ defmodule LobbyTui.Theatre.RenderTest do
   end
 
   describe "the stage" do
-    @stage_center 88
-    @curtain_row 6
+    @stage_center div(176, 2)
+    @vh 40
 
     defp seated_state(curtain, feed \\ []) do
       seat = Enum.find(World.seats(), &(&1.row == 8 and &1.col == 6))
@@ -286,61 +286,90 @@ defmodule LobbyTui.Theatre.RenderTest do
 
     defp msg(nickname, body), do: %{author_nickname: nickname, body: body}
 
-    test "the camera lifts to the stage when seated and follows the attendee otherwise" do
-      standing = state({20, 70})
-      assert {_ox, oy} = Render.viewport_origin(standing, 60, 40)
-      assert oy > 0, "a standing attendee's camera should follow them down the room"
+    # `world_lines/3` returns only the rows the viewport covers, and a
+    # seated viewport is anchored at the bottom of the world — so a world
+    # row has to be shifted by the camera origin to index into them.
+    defp seated_origin_y(vh \\ @vh), do: World.height() - vh
+    defp stage_cell(lines, x, world_y), do: cell(lines, x, world_y - seated_origin_y())
+
+    # A row well inside the drape, clear of the apron and the far edge.
+    defp curtain_row, do: World.stage_rows().last - 1
+
+    test "the camera drops to the stage when seated and follows the attendee otherwise" do
+      # The stage runs along the bottom of the world, so framing it means
+      # anchoring at the last row the viewport can reach.
+      standing = state({20, 30})
+      assert {_ox, standing_oy} = Render.viewport_origin(standing, 60, 40)
 
       seated = seated_state(0)
-      assert {ox, 0} = Render.viewport_origin(seated, 60, 40)
+      assert {ox, seated_oy} = Render.viewport_origin(seated, 60, 40)
+
+      assert seated_oy == World.height() - 40
+      assert seated_oy > standing_oy, "sitting should carry the camera down to the stage"
       assert ox == @stage_center - 30
+
+      for y <- World.stage_rows(), do: assert(y in seated_oy..(seated_oy + 39))
     end
 
     test "a shut curtain paints nothing, leaving the scene's own drape" do
-      lines = Render.world_lines(seated_state(0), 60, 40)
+      lines = Render.world_lines(seated_state(0), 176, @vh)
       # Scene is stubbed empty in setup, so an unpainted stage cell falls
       # back to the plain floor span rather than any stage colour.
-      assert %Span{style: %Style{bg: :black}} = cell(lines, 30, @curtain_row)
+      assert %Span{style: %Style{bg: :black}} = stage_cell(lines, 30, curtain_row())
     end
 
     test "a fully open curtain clears the whole band, symmetrically" do
       steps = LobbyTui.Theatre.curtain_steps()
-      lines = Render.world_lines(seated_state(steps), 176, 40)
+      lines = Render.world_lines(seated_state(steps), 176, @vh)
 
-      centre = cell(lines, @stage_center, @curtain_row)
+      centre = stage_cell(lines, @stage_center, curtain_row())
       assert %Span{style: %Style{bg: {:rgb, _, _, _}}} = centre
 
       # Equal reach either side of the proscenium's centre line.
       for offset <- [10, 40, 80] do
-        assert cell(lines, @stage_center - offset, @curtain_row).style.bg == centre.style.bg
-        assert cell(lines, @stage_center + offset, @curtain_row).style.bg == centre.style.bg
+        assert stage_cell(lines, @stage_center - offset, curtain_row()).style.bg ==
+                 centre.style.bg
+
+        assert stage_cell(lines, @stage_center + offset, curtain_row()).style.bg ==
+                 centre.style.bg
       end
     end
 
     test "a half-open curtain has cleared the middle but not the wings" do
       steps = LobbyTui.Theatre.curtain_steps()
-      lines = Render.world_lines(seated_state(div(steps, 2)), 176, 40)
+      lines = Render.world_lines(seated_state(div(steps, 2)), 176, @vh)
 
-      opened = cell(lines, @stage_center, @curtain_row).style.bg
+      opened = stage_cell(lines, @stage_center, curtain_row()).style.bg
       assert opened != :black
-      assert cell(lines, 6, @curtain_row).style.bg == :black
+      assert stage_cell(lines, 6, curtain_row()).style.bg == :black
+    end
+
+    test "the apron never travels with the drape" do
+      steps = LobbyTui.Theatre.curtain_steps()
+      lines = Render.world_lines(seated_state(steps), 176, @vh)
+
+      for y <- World.apron_rows() do
+        assert stage_cell(lines, @stage_center, y).style.bg == :black
+      end
+    end
+
+    defp stage_text(lines) do
+      for y <- World.stage_rows() do
+        lines
+        |> Enum.at(y - seated_origin_y())
+        |> Map.fetch!(:spans)
+        |> Enum.map_join(& &1.content)
+        |> String.trim()
+      end
     end
 
     test "messages play on the stage, newest on the bottom line" do
       steps = LobbyTui.Theatre.curtain_steps()
       feed = [msg("ana", "second"), msg("gus", "first")]
-      lines = Render.world_lines(seated_state(steps, feed), 176, 40)
+      lines = Render.world_lines(seated_state(steps, feed), 176, @vh)
 
-      rendered =
-        for y <- 2..11 do
-          lines
-          |> Enum.at(y)
-          |> Map.fetch!(:spans)
-          |> Enum.map_join(& &1.content)
-          |> String.trim()
-        end
+      text = lines |> stage_text() |> Enum.reject(&(&1 == ""))
 
-      text = Enum.reject(rendered, &(&1 == ""))
       assert length(text) == 2
       assert List.first(text) =~ "gus: first"
       assert List.last(text) =~ "ana: second"
@@ -349,14 +378,9 @@ defmodule LobbyTui.Theatre.RenderTest do
     test "messages stay hidden until the curtain is all the way open" do
       steps = LobbyTui.Theatre.curtain_steps()
       feed = [msg("gus", "hello")]
-      lines = Render.world_lines(seated_state(steps - 1, feed), 176, 40)
+      lines = Render.world_lines(seated_state(steps - 1, feed), 176, @vh)
 
-      rendered =
-        for y <- 2..11 do
-          lines |> Enum.at(y) |> Map.fetch!(:spans) |> Enum.map_join(& &1.content)
-        end
-
-      refute Enum.any?(rendered, &(&1 =~ "hello"))
+      refute Enum.any?(stage_text(lines), &(&1 =~ "hello"))
     end
   end
 end

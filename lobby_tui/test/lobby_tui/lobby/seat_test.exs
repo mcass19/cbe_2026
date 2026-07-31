@@ -26,9 +26,9 @@ defmodule LobbyTui.Lobby.SeatTest do
       flunk("no free seat available")
   end
 
-  test "seeding is idempotent and yields 120 seats" do
+  test "seeding is idempotent and yields one record per world seat" do
     LobbyTui.Lobby.Seeder.seed_seats!()
-    assert length(Lobby.list_seats!()) == 120
+    assert length(Lobby.list_seats!()) == length(LobbyTui.World.seats())
   end
 
   test "an attendee claims a free seat" do
