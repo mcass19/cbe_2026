@@ -11,19 +11,42 @@ defmodule LobbyTuiWeb.Layouts do
   # and other static content.
   embed_templates "layouts/*"
 
-  @doc """
-  Renders the app layout: flash messages plus the page content, nothing else.
+  @page_title "TUIs everywhere — Code BEAM Europe 2026"
+  @source_url "https://github.com/mcass19/cbe_2026/tree/main/lobby_tui"
+  @privacy_url "https://github.com/mcass19/cbe_2026/blob/main/lobby_tui/docs/PRIVACY.md"
 
-  This app's pages (the join screen, the room) build their own chrome, so
-  the generated marketing header (logo, framework links, version badge) has
-  no place here and was removed. Nothing in this app currently calls
-  `app/1` — the router's root layout is the `:root` template below, not
-  this function — but the module and function stay as the documented
-  extension point, slimmed to a minimal passthrough.
+  @doc """
+  Renders the app layout: the shared title row, the page content, the
+  data-transparency footer, and flash messages.
+
+  Both pages — the join screen and the room — are HTML chrome around an
+  embedded ratatui canvas, so they should read as one terminal window
+  rather than two related screens. Each used to carry its own copy of
+  the title row and the footer, and the two copies had drifted: different
+  titles, different type scale, different padding. They live here now,
+  and both pages call this function.
+
+  The generated marketing header (logo, framework links, version badge)
+  is still gone; this is the app's own chrome, not the framework's.
+
+  Only two things vary per page. `:class` sets the outer shell, because
+  the pages have genuinely different scroll semantics — the join screen
+  scrolls through a hundred-odd avatars, while the room must never
+  scroll, since the theatre sizes itself to the remaining space.
+  `:actions` adds page-specific links beside `[source]`; the room uses it
+  for the leave link. Everything else is fixed on purpose: the title and
+  the footer are identity, not configuration.
 
   ## Examples
 
       <Layouts.app flash={@flash}>
+        <h1>Content</h1>
+      </Layouts.app>
+
+      <Layouts.app flash={@flash} id="lobby-shell" class="h-dvh overflow-hidden flex flex-col gap-2 p-2">
+        <:actions>
+          <.link href={~p"/leave"} method="delete">[leave]</.link>
+        </:actions>
         <h1>Content</h1>
       </Layouts.app>
 
@@ -34,14 +57,77 @@ defmodule LobbyTuiWeb.Layouts do
     default: nil,
     doc: "the current [scope](https://hexdocs.pm/phoenix/scopes.html)"
 
+  attr :id, :string, default: nil, doc: "optional DOM id for the outer shell"
+
+  attr :class, :string,
+    default: "min-h-dvh p-4 flex flex-col gap-2",
+    doc: "outer shell classes; override for pages that must not scroll"
+
+  slot :actions, doc: "page-specific links, rendered to the left of [source]"
   slot :inner_block, required: true
 
   def app(assigns) do
+    assigns = assign(assigns, title: @page_title, source_url: @source_url)
+
     ~H"""
-    {render_slot(@inner_block)}
+    <div id={@id} class={@class}>
+      <header
+        id="page-header"
+        class="shrink-0 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between"
+      >
+        <h1 class="text-base sm:text-xl font-bold tracking-widest text-[var(--tui-accent)]">
+          {@title}
+        </h1>
+        <nav class="flex items-center gap-3 text-sm">
+          {render_slot(@actions)}
+          <a href={@source_url} target="_blank" class="text-[var(--tui-accent)] hover:underline">
+            [source]
+          </a>
+        </nav>
+      </header>
+
+      {render_slot(@inner_block)}
+
+      <.data_notice />
+    </div>
     <.flash_group flash={@flash} />
     """
   end
+
+  @doc """
+  The data-transparency notice pinned to the bottom of the page.
+
+  `mt-auto` pins it on the join screen, whose content does not fill the
+  viewport, and is inert in the room, where the theatre already takes the
+  slack via `flex-1`. One class serves both layouts.
+  """
+  def data_notice(assigns) do
+    assigns = assign(assigns, privacy_url: @privacy_url)
+
+    ~H"""
+    <footer
+      id="data-notice"
+      class="shrink-0 mt-auto pt-1 text-center text-[11px] leading-tight text-[var(--tui-dim)] border-t border-[var(--tui-border)]"
+    >
+      Everything here lives in memory (ETS via Ash). You disappear when you disconnect.
+      Messages are wiped when the server restarts. Please don't post personal information.
+      <a href={@privacy_url} class="underline text-[var(--tui-accent-2)]">
+        Privacy note.
+      </a>
+    </footer>
+    """
+  end
+
+  @doc """
+  The shared page title. Exposed so the root layout and tests agree on one
+  string.
+
+  Named `shared_title/0` rather than `page_title/0` because `root.html.heex`
+  is compiled into this module and already reads `assigns[:page_title]` for
+  the per-page `<title>` override — two different things that should not
+  look alike at the call site.
+  """
+  def shared_title, do: @page_title
 
   @doc """
   Shows the flash group with standard titles and content.

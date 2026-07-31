@@ -1,15 +1,4 @@
-<div class="min-h-dvh p-4 flex flex-col">
-  <div class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-    <h1 class="text-2xl font-bold text-[var(--tui-accent)] tracking-widest">
-      TUIs everywhere — the lobby
-    </h1>
-    <a
-      href="https://github.com/mcass19/cbe_2026/tree/main/lobby_tui"
-      class="text-[var(--tui-dim)] hover:underline"
-    >
-      [source]
-    </a>
-  </div>
+<Layouts.app flash={@flash}>
   <p :if={@error} id="join-error" class="text-red-400 py-2">{@error}</p>
   <form id="join-form" action={~p"/join"} method="post" class="flex flex-col gap-3 pt-2">
     <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
@@ -31,7 +20,7 @@
       </div>
       <button
         type="submit"
-        class="border border-[var(--tui-border)] px-3 py-1 text-[var(--tui-fg)] transition-colors hover:border-[var(--tui-accent)] hover:text-[var(--tui-accent)] whitespace-nowrap sm:w-auto"
+        class="border border-[var(--tui-border)] px-3 py-1 text-[var(--tui-fg)] transition-colors hover:border-[var(--tui-accent-2)] hover:text-[var(--tui-accent-2)] whitespace-nowrap sm:w-auto"
       >
         Enter the lobby
       </button>
@@ -40,24 +29,11 @@
       <legend class="text-sm px-1 text-[var(--tui-dim)]">Pick an avatar</legend>
       <label :for={avatar <- @avatars} class="group inline-block m-1 cursor-pointer">
         <input type="radio" name="avatar_id" value={avatar.id} required class="peer sr-only" />
-        <div class="p-1 border border-[var(--tui-border)] transition-colors hover:border-[var(--tui-accent)] hover:bg-[var(--tui-accent-tint)] peer-checked:border-[var(--tui-accent)] peer-checked:bg-[var(--tui-accent-tint)] peer-checked:shadow-[0_0_0_1px_var(--tui-accent)]">
+        <div class="p-1 border border-[var(--tui-border)] transition-colors hover:border-[var(--tui-accent-2)] hover:bg-[var(--tui-accent-tint)] peer-checked:border-[var(--tui-accent)] peer-checked:bg-[var(--tui-accent-tint)] peer-checked:shadow-[0_0_0_1px_var(--tui-accent)]">
           <.sprite cells={avatar.sprite_cells} />
           <span class="sr-only">{avatar.name}</span>
         </div>
       </label>
     </fieldset>
   </form>
-  <footer
-    id="data-notice"
-    class="mt-auto pt-4 text-center text-xs text-[var(--tui-dim)] border-t border-[var(--tui-border)]"
-  >
-    Everything here lives in memory (ETS via Ash). You disappear when you disconnect.
-    Messages are wiped when the server restarts. Please don't post personal information.
-    <a
-      href="https://github.com/mcass19/cbe_2026/blob/main/lobby_tui/docs/PRIVACY.md"
-      class="underline"
-    >
-      Privacy note.
-    </a>
-  </footer>
-</div>
+</Layouts.app>

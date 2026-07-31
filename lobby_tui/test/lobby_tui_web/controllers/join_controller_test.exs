@@ -18,6 +18,55 @@ defmodule LobbyTuiWeb.JoinControllerTest do
     assert html =~ "lives in memory"
   end
 
+  test "GET / wears the shared chrome and offers no leave link", %{conn: conn} do
+    html = conn |> get(~p"/") |> html_response(200)
+
+    assert html =~ ~s(id="page-header")
+    assert html =~ LobbyTuiWeb.Layouts.shared_title()
+    assert html =~ "[source]"
+    # Nothing to leave yet — the link belongs to the room only.
+    refute html =~ ~s(id="leave-link")
+  end
+
+  describe "DELETE /leave" do
+    test "destroys the attendee, clears the session, and returns to the join screen", %{
+      conn: conn
+    } do
+      {:ok, attendee} = LobbyTui.Lobby.join("leaver", an_avatar_id())
+
+      conn =
+        conn |> Plug.Test.init_test_session(%{attendee_id: attendee.id}) |> delete(~p"/leave")
+
+      assert redirected_to(conn) == ~p"/"
+      assert get_session(conn, :attendee_id) == nil
+      assert {:error, _} = LobbyTui.Lobby.get_attendee(attendee.id)
+    end
+
+    test "frees the nickname so the same one can be taken again", %{conn: conn} do
+      {:ok, attendee} = LobbyTui.Lobby.join("recycled", an_avatar_id())
+
+      conn |> Plug.Test.init_test_session(%{attendee_id: attendee.id}) |> delete(~p"/leave")
+
+      assert {:ok, _} = LobbyTui.Lobby.join("recycled", an_avatar_id())
+    end
+
+    test "tolerates a stale attendee_id", %{conn: conn} do
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{attendee_id: Ash.UUID.generate()})
+        |> delete(~p"/leave")
+
+      assert redirected_to(conn) == ~p"/"
+      assert get_session(conn, :attendee_id) == nil
+    end
+
+    test "tolerates no session at all", %{conn: conn} do
+      conn = conn |> Plug.Test.init_test_session(%{}) |> delete(~p"/leave")
+
+      assert redirected_to(conn) == ~p"/"
+    end
+  end
+
   test "GET / does not offer the built-in unknown fallback avatar", %{conn: conn} do
     unknown = Enum.find(LobbyTui.Lobby.list_avatars!(), &(&1.name == "unknown"))
     html = conn |> get(~p"/") |> html_response(200)

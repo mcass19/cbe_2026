@@ -106,19 +106,34 @@
 
 /* Terminal chrome palette (pixtuoid restyle, design doc D5). Both pages are
    HTML chrome around an embedded ratatui canvas, so the whole page reads as
-   one terminal: near-black background, light-gray body text, amber accent,
-   dim gray secondary text, mid-gray borders. These variables are set at
-   `:root` unconditionally — a terminal has one look, so this is
-   deliberately not scoped under `[data-theme=...]`. The generated
-   light/dark theme toggle (`LobbyTuiWeb.Layouts.theme_toggle/1`, wired up
-   in root.html.heex) is left in place for any future non-terminal page; it
-   is simply not consulted here. */
+   one terminal: purple-black background, light-gray body text, dim gray
+   secondary text, mid-gray borders. These variables are set at `:root`
+   unconditionally — a terminal has one look, so this is deliberately not
+   scoped under `[data-theme=...]`. The generated light/dark theme toggle
+   (`LobbyTuiWeb.Layouts.theme_toggle/1`, wired up in root.html.heex) is
+   left in place for any future non-terminal page; it is simply not
+   consulted here.
+
+   The two accents track Code BEAM Europe's own magenta/cyan pair, sampled
+   from the conference site rather than an official brand file, so they are
+   approximate and safe to nudge. They carry distinct roles:
+
+     --tui-accent    magenta — identity and selection: the page title, the
+                     [source] link, the chosen avatar, the input caret, the
+                     reconnect alert.
+     --tui-accent-2  cyan — affordances and small text: kbd chips, the key
+                     bar, hover and active states, the privacy link.
+
+   The split is not only brand-faithful, it is a legibility decision.
+   Against this background magenta lands near 5.5:1 and cyan near 9:1, so
+   the smallest text in the UI gets the more readable of the two. */
 :root {
-  --tui-bg: #0d1117;
+  --tui-bg: #0d0714;
   --tui-fg: #c9d1d9;
   --tui-dim: #6e7681;
-  --tui-accent: #e3b341;
-  --tui-accent-tint: rgb(227 179 65 / 15%);
+  --tui-accent: #e11fc1;
+  --tui-accent-tint: rgb(225 31 193 / 15%);
+  --tui-accent-2: #22cede;
   --tui-border: #484f58;
 }
 

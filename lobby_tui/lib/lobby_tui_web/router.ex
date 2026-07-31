@@ -19,6 +19,7 @@ defmodule LobbyTuiWeb.Router do
 
     get "/", JoinController, :new
     post "/join", JoinController, :create
+    delete "/leave", JoinController, :leave
     live "/lobby", LobbyLive
   end
 

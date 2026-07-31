@@ -121,7 +121,7 @@ defmodule LobbyTuiWeb.LobbyLiveTest do
     {conn, _attendee} = join_conn(conn)
     {:ok, view, _html} = live(conn, ~p"/lobby")
 
-    assert has_element?(view, "#lobby-header")
+    assert has_element?(view, "#page-header")
     assert has_element?(view, "#theatre-wrap")
     assert has_element?(view, "#theatre")
     assert has_element?(view, "#reconnect-banner")
@@ -129,6 +129,28 @@ defmodule LobbyTuiWeb.LobbyLiveTest do
     assert has_element?(view, "#sit-button")
     assert has_element?(view, "#data-notice")
     refute has_element?(view, "#chat-form")
+  end
+
+  test "wears the same chrome as the join screen, plus a leave link", %{conn: conn} do
+    {conn, _attendee} = join_conn(conn)
+    {:ok, view, html} = live(conn, ~p"/lobby")
+
+    # Same title and same footer copy as the join screen — one terminal
+    # window, not two related screens.
+    assert html =~ LobbyTuiWeb.Layouts.shared_title()
+    assert html =~ "lives in memory"
+    assert has_element?(view, "#page-header")
+    assert has_element?(view, "#leave-link")
+  end
+
+  test "the leave link is a confirmed DELETE, not a plain navigation", %{conn: conn} do
+    {conn, _attendee} = join_conn(conn)
+    {:ok, _view, html} = live(conn, ~p"/lobby")
+
+    # A stray tap on a phone must not silently destroy the attendee and
+    # release the seat, and clearing the session needs a real request.
+    assert html =~ ~s(data-method="delete")
+    assert html =~ "data-confirm"
   end
 
   test "the keybinding status bar shows the unseated hint, then swaps on sit/stand", %{
