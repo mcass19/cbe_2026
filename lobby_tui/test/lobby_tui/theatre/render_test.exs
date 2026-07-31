@@ -233,12 +233,15 @@ defmodule LobbyTui.Theatre.RenderTest do
            }
   end
 
-  test "widgets: world only when unseated, world + feed panel when seated" do
+  # The feed used to take a band at the bottom of the frame; it plays on
+  # the stage now, so the layout no longer changes when the attendee sits
+  # and the room never resizes underneath them.
+  test "widgets: world plus status row, seated or not" do
     frame = %Frame{width: 60, height: 40}
     assert [{_world, _rect}, {_status, _}] = Render.widgets(state(), frame)
 
     seated = %{state() | seated?: true}
-    assert [{_world, _}, {_feed, _}, {_status, _}] = Render.widgets(seated, frame)
+    assert [{_world, _}, {_status, _}] = Render.widgets(seated, frame)
   end
 
   test "hint appears in the status line" do
@@ -262,7 +265,98 @@ defmodule LobbyTui.Theatre.RenderTest do
   test "status line is empty (not help text) when seated with no hint" do
     frame = %Frame{width: 60, height: 40}
     seated = %{state() | seated?: true}
-    [_world, {_feed, _}, {status, _rect}] = Render.widgets(seated, frame)
+    [_world, {status, _rect}] = Render.widgets(seated, frame)
     assert status.text == ""
+  end
+
+  describe "the stage" do
+    @stage_center 88
+    @curtain_row 6
+
+    defp seated_state(curtain, feed \\ []) do
+      seat = Enum.find(World.seats(), &(&1.row == 8 and &1.col == 6))
+
+      %{
+        state({seat.x, seat.y})
+        | seated?: true,
+          curtain: curtain,
+          feed: feed
+      }
+    end
+
+    defp msg(nickname, body), do: %{author_nickname: nickname, body: body}
+
+    test "the camera lifts to the stage when seated and follows the attendee otherwise" do
+      standing = state({20, 70})
+      assert {_ox, oy} = Render.viewport_origin(standing, 60, 40)
+      assert oy > 0, "a standing attendee's camera should follow them down the room"
+
+      seated = seated_state(0)
+      assert {ox, 0} = Render.viewport_origin(seated, 60, 40)
+      assert ox == @stage_center - 30
+    end
+
+    test "a shut curtain paints nothing, leaving the scene's own drape" do
+      lines = Render.world_lines(seated_state(0), 60, 40)
+      # Scene is stubbed empty in setup, so an unpainted stage cell falls
+      # back to the plain floor span rather than any stage colour.
+      assert %Span{style: %Style{bg: :black}} = cell(lines, 30, @curtain_row)
+    end
+
+    test "a fully open curtain clears the whole band, symmetrically" do
+      steps = LobbyTui.Theatre.curtain_steps()
+      lines = Render.world_lines(seated_state(steps), 176, 40)
+
+      centre = cell(lines, @stage_center, @curtain_row)
+      assert %Span{style: %Style{bg: {:rgb, _, _, _}}} = centre
+
+      # Equal reach either side of the proscenium's centre line.
+      for offset <- [10, 40, 80] do
+        assert cell(lines, @stage_center - offset, @curtain_row).style.bg == centre.style.bg
+        assert cell(lines, @stage_center + offset, @curtain_row).style.bg == centre.style.bg
+      end
+    end
+
+    test "a half-open curtain has cleared the middle but not the wings" do
+      steps = LobbyTui.Theatre.curtain_steps()
+      lines = Render.world_lines(seated_state(div(steps, 2)), 176, 40)
+
+      opened = cell(lines, @stage_center, @curtain_row).style.bg
+      assert opened != :black
+      assert cell(lines, 6, @curtain_row).style.bg == :black
+    end
+
+    test "messages play on the stage, newest on the bottom line" do
+      steps = LobbyTui.Theatre.curtain_steps()
+      feed = [msg("ana", "second"), msg("gus", "first")]
+      lines = Render.world_lines(seated_state(steps, feed), 176, 40)
+
+      rendered =
+        for y <- 2..11 do
+          lines
+          |> Enum.at(y)
+          |> Map.fetch!(:spans)
+          |> Enum.map_join(& &1.content)
+          |> String.trim()
+        end
+
+      text = Enum.reject(rendered, &(&1 == ""))
+      assert length(text) == 2
+      assert List.first(text) =~ "gus: first"
+      assert List.last(text) =~ "ana: second"
+    end
+
+    test "messages stay hidden until the curtain is all the way open" do
+      steps = LobbyTui.Theatre.curtain_steps()
+      feed = [msg("gus", "hello")]
+      lines = Render.world_lines(seated_state(steps - 1, feed), 176, 40)
+
+      rendered =
+        for y <- 2..11 do
+          lines |> Enum.at(y) |> Map.fetch!(:spans) |> Enum.map_join(& &1.content)
+        end
+
+      refute Enum.any?(rendered, &(&1 =~ "hello"))
+    end
   end
 end

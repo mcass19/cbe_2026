@@ -9,6 +9,15 @@ defmodule LobbyTui.Theatre do
   alias LobbyTui.{Lobby, World}
   alias LobbyTui.Theatre.{Render, State}
 
+  # The curtain draws back over this many frames. 8 × 55 ms is a beat
+  # short of half a second: long enough to read as a curtain rising
+  # rather than a cut, short enough that nobody waits for it.
+  @curtain_steps 8
+  @curtain_tick_ms 55
+
+  @doc "Frames in a full curtain sweep. `State.curtain` runs 0..this."
+  def curtain_steps, do: @curtain_steps
+
   @impl true
   def mount(opts) do
     attendee = Keyword.fetch!(opts, :attendee)
@@ -39,6 +48,15 @@ defmodule LobbyTui.Theatre do
     {:noreply, State.hint(state, "press space to stand")}
   end
 
+  # Seated attendees are pinned. The camera has panned to the stage by
+  # this point, so a step would move them somewhere they cannot see while
+  # they still hold the seat — and silently walking out of a claimed seat
+  # is exactly the split-brain the seat keeper exists to prevent.
+  def handle_event(%Key{code: code, kind: "press"}, %State{seated?: true} = state)
+      when code in ["up", "down", "left", "right"] do
+    {:noreply, State.hint(state, "press space to stand")}
+  end
+
   def handle_event(%Key{code: code, kind: "press"}, state)
       when code in ["up", "down", "left", "right"] do
     {:noreply, state |> State.step(String.to_existing_atom(code)) |> broadcast_position()}
@@ -53,8 +71,10 @@ defmodule LobbyTui.Theatre do
     {:noreply, State.hint(state, "press space to stand")}
   end
 
+  # Sitting snaps the attendee onto the seat anchor, so the new position
+  # has to go out to everyone else's viewport like any other move.
   def handle_event(%Key{code: code, kind: "press"}, state) when code in ["s", "enter"] do
-    {:noreply, try_sit(state)}
+    {:noreply, state |> try_sit() |> broadcast_position()}
   end
 
   # Quit is opt-in via the `quit?: true` mount option (set by `LobbyTui.Local`
@@ -104,11 +124,21 @@ defmodule LobbyTui.Theatre do
         },
         state
       ) do
+    # The anchor comes from `World`, not from the record's stored x/y: seats
+    # are seeded at boot, so a persisted coordinate is a snapshot of the
+    # geometry as it was then and would tint the wrong cell after any
+    # change to the layout.
     occupied =
-      if is_nil(seat.occupant_id) do
-        Map.delete(state.occupied, {seat.x, seat.y})
-      else
-        Map.put(state.occupied, {seat.x, seat.y}, occupant_entry(seat.occupant_id))
+      case World.seat_anchor(seat.row, seat.col) do
+        nil ->
+          state.occupied
+
+        anchor ->
+          if is_nil(seat.occupant_id) do
+            Map.delete(state.occupied, anchor)
+          else
+            Map.put(state.occupied, anchor, occupant_entry(seat.occupant_id))
+          end
       end
 
     {:noreply, %{state | occupied: occupied}}
@@ -130,15 +160,54 @@ defmodule LobbyTui.Theatre do
 
   def handle_info(%Phoenix.Socket.Broadcast{topic: "lobby:stage"}, state), do: {:noreply, state}
 
+  # One frame of the curtain sweep. The target is derived from `seated?`
+  # rather than stored, so a sit-then-stand mid-sweep simply reverses on
+  # the next frame instead of needing the in-flight animation cancelled.
+  def handle_info(:curtain_tick, state) do
+    {:noreply, state |> step_curtain() |> schedule_curtain()}
+  end
+
   def handle_info(_msg, state), do: {:noreply, state}
+
+  # -- curtain ---------------------------------------------------------------
+
+  defp curtain_target(%State{seated?: true}), do: @curtain_steps
+  defp curtain_target(%State{seated?: false}), do: 0
+
+  defp step_curtain(%State{curtain: curtain} = state) do
+    target = curtain_target(state)
+
+    cond do
+      curtain < target -> %{state | curtain: curtain + 1}
+      curtain > target -> %{state | curtain: curtain - 1}
+      true -> state
+    end
+  end
+
+  # Idempotent by construction: once the curtain has reached its target no
+  # further frame is queued, so repeated calls cannot pile up timers.
+  defp schedule_curtain(%State{curtain: curtain} = state) do
+    if curtain != curtain_target(state) do
+      Process.send_after(self(), :curtain_tick, @curtain_tick_ms)
+    end
+
+    state
+  end
 
   # -- side effects ----------------------------------------------------------
 
+  # Any cell of a seat's painted block sits in it (see `World`), so the
+  # attendee is snapped onto the anchor on the way down. That keeps seated
+  # avatars aligned to the seat they are actually in, and leaves the
+  # occupancy tint one known cell to paint.
   defp try_sit(%State{pos: pos} = state) do
     with %{} = world_seat <- World.seat_at(pos),
          %{} = seat <- find_seat_record(world_seat),
          {:ok, _} <- Lobby.claim_seat(seat, actor: state.attendee) do
-      %{state | seated?: true} |> load_feed() |> State.hint(nil)
+      %{state | seated?: true, pos: {world_seat.x, world_seat.y}}
+      |> load_feed()
+      |> State.hint(nil)
+      |> schedule_curtain()
     else
       nil -> State.hint(state, "walk onto a seat to sit")
       {:error, _taken} -> State.hint(state, "seat taken — try another")
@@ -152,7 +221,7 @@ defmodule LobbyTui.Theatre do
   defp try_stand(%State{attendee: attendee} = state) do
     with {:ok, seat} <- Lobby.seat_of(attendee.id),
          {:ok, _} <- Lobby.stand(seat, actor: attendee) do
-      %{state | seated?: false, feed: []} |> State.hint(nil)
+      %{state | seated?: false, feed: []} |> State.hint(nil) |> schedule_curtain()
     else
       _ -> state
     end
@@ -189,8 +258,13 @@ defmodule LobbyTui.Theatre do
     end
   end
 
-  defp find_seat_record(%{x: x, y: y}) do
-    Enum.find(Lobby.list_seats!(), &(&1.x == x and &1.y == y))
+  # Matched on `{row, col}` — the seat's declared identity — rather than on
+  # its coordinates. Seats are seeded into ETS at boot, so a world whose
+  # geometry moved since then still holds the old x/y, and a coordinate
+  # match would silently find nothing and make every seat in the house
+  # unsittable. Row and column never move.
+  defp find_seat_record(%{row: row, col: col}) do
+    Enum.find(Lobby.list_seats!(), &(&1.row == row and &1.col == col))
   end
 
   # Fetches the occupant's Presence color once, event-time (a seat claim
@@ -259,10 +333,18 @@ defmodule LobbyTui.Theatre do
     Phoenix.PubSub.subscribe(LobbyTui.PubSub, "lobby:stage")
     {:ok, _ref} = LobbyTui.Presence.track_attendee(state)
 
+    # Anchors from `World` for the same reason as the seat broadcast above:
+    # the record's stored coordinates date from boot-time seeding.
     occupied =
       Lobby.list_seats!()
       |> Enum.reject(&is_nil(&1.occupant_id))
-      |> Map.new(&{{&1.x, &1.y}, occupant_entry(&1.occupant_id)})
+      |> Enum.flat_map(fn seat ->
+        case World.seat_anchor(seat.row, seat.col) do
+          nil -> []
+          anchor -> [{anchor, occupant_entry(seat.occupant_id)}]
+        end
+      end)
+      |> Map.new()
 
     state = %{
       state

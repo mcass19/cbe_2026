@@ -111,7 +111,7 @@ defmodule LobbyTuiWeb.Layouts do
     >
       Everything here lives in memory (ETS via Ash). You disappear when you disconnect.
       Messages are wiped when the server restarts. Please don't post personal information.
-      <a href={@privacy_url} class="underline text-[var(--tui-accent-2)]">
+      <a href={@privacy_url} target="_blank" class="underline text-[var(--tui-accent-2)]">
         Privacy note.
       </a>
     </footer>

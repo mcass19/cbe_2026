@@ -2,7 +2,9 @@ defmodule LobbyTuiWeb.LobbyLive do
   @moduledoc """
   The room page: plain HEEx chrome around the embedded Theatre TUI. The chrome is deliberately HTML — the frame is a web page, the world inside is a terminal.
 
-  The title row and the data-transparency footer come from `LobbyTuiWeb.Layouts.app/1`, shared with the join screen so the two read as one terminal window; this module contributes the leave link, the D-pad, the key bar and the chat input. The shell overrides the layout's default classes because the room must never scroll — the theatre sizes itself to whatever space the other rows leave.
+  The title row and the data-transparency footer come from `LobbyTuiWeb.Layouts.app/1`, shared with the join screen so the two read as one terminal window; this module contributes the leave link, the D-pad and the chat input. The shell overrides the layout's default classes because the room must never scroll — the theatre sizes itself to whatever space the other rows leave.
+
+  There is no written key legend. The pad spells out every action it can perform — arrows, sit, stand — so a row of text repeating them was only taking space away from the room. Situational guidance ("seat taken", "press space to stand") lives in the TUI's own status row, which is the one surface that knows the current state.
   """
 
   use LobbyTuiWeb, :live_view
@@ -57,21 +59,6 @@ defmodule LobbyTuiWeb.LobbyLive do
         <.live_component module={TheatreComponent} id="theatre" attendee={@attendee} />
       </div>
 
-      <div
-        id="key-bar"
-        class="shrink-0 border border-[var(--tui-border)] px-3 py-1 text-xs text-[var(--tui-dim)]"
-      >
-        <%= if @seated? do %>
-          <kbd class="text-[var(--tui-accent-2)]">[space]</kbd>
-          stand · <kbd class="text-[var(--tui-accent-2)]">[enter]</kbd>
-          send · seated
-        <% else %>
-          <kbd class="text-[var(--tui-accent-2)]">[↑↓←→]</kbd>
-          move · <kbd class="text-[var(--tui-accent-2)]">[s]</kbd>
-          sit · walk onto a seat
-        <% end %>
-      </div>
-
       <form :if={@seated?} id="chat-form" phx-submit="say" class="shrink-0 flex gap-2">
         <div class="flex flex-1 items-center gap-2 border border-[var(--tui-border)] px-2 py-1">
           <span class="text-[var(--tui-accent)]">&gt;</span>
@@ -95,50 +82,47 @@ defmodule LobbyTuiWeb.LobbyLive do
         </button>
       </form>
 
-      <div id="d-pad" class="shrink-0 flex justify-center gap-2 select-none">
-        <button
-          class="min-w-12 min-h-12 p-2 border border-[var(--tui-border)] text-[var(--tui-fg)] active:border-[var(--tui-accent-2)] active:text-[var(--tui-accent-2)]"
-          style="touch-action: manipulation;"
-          phx-click="dpad"
-          phx-value-dir="left"
-        >
-          ◄
-        </button>
-        <button
-          class="min-w-12 min-h-12 p-2 border border-[var(--tui-border)] text-[var(--tui-fg)] active:border-[var(--tui-accent-2)] active:text-[var(--tui-accent-2)]"
-          style="touch-action: manipulation;"
-          phx-click="dpad"
-          phx-value-dir="up"
-        >
-          ▲
-        </button>
-        <button
-          class="min-w-12 min-h-12 p-2 border border-[var(--tui-border)] text-[var(--tui-fg)] active:border-[var(--tui-accent-2)] active:text-[var(--tui-accent-2)]"
-          style="touch-action: manipulation;"
-          phx-click="dpad"
-          phx-value-dir="down"
-        >
-          ▼
-        </button>
-        <button
-          class="min-w-12 min-h-12 p-2 border border-[var(--tui-border)] text-[var(--tui-fg)] active:border-[var(--tui-accent-2)] active:text-[var(--tui-accent-2)]"
-          style="touch-action: manipulation;"
-          phx-click="dpad"
-          phx-value-dir="right"
-        >
-          ►
-        </button>
-        <button
-          id="sit-button"
-          class="min-w-12 min-h-12 p-2 border border-[var(--tui-border)] text-[var(--tui-fg)] active:border-[var(--tui-accent-2)] active:text-[var(--tui-accent-2)]"
-          style="touch-action: manipulation;"
-          phx-click="dpad"
-          phx-value-dir={if @seated?, do: " ", else: "s"}
-        >
+      <%!--
+        Seated, there is nowhere to walk to — the arrows are refused by the
+        Theatre and the camera is on the stage anyway — so the pad collapses
+        to the one action that applies and gives the room back a row.
+      --%>
+      <div id="d-pad" class="shrink-0 flex justify-center items-end gap-4 select-none">
+        <div :if={not @seated?} class="grid grid-cols-3 gap-1">
+          <span></span>
+          <.pad_button dir="up">▲</.pad_button>
+          <span></span>
+          <.pad_button dir="left">◄</.pad_button>
+          <.pad_button dir="down">▼</.pad_button>
+          <.pad_button dir="right">►</.pad_button>
+        </div>
+        <.pad_button id="sit-button" dir={if @seated?, do: " ", else: "s"}>
           {if @seated?, do: "stand", else: "sit"}
-        </button>
+        </.pad_button>
       </div>
     </Layouts.app>
+    """
+  end
+
+  # One key of the on-screen pad. `touch-action: manipulation` suppresses
+  # the browser's double-tap-to-zoom delay, which otherwise makes repeated
+  # taps feel unresponsive — this pad is the only way to move on a phone,
+  # and phones are the point.
+  attr :dir, :string, required: true
+  attr :id, :string, default: nil
+  slot :inner_block, required: true
+
+  defp pad_button(assigns) do
+    ~H"""
+    <button
+      id={@id}
+      class="min-w-12 min-h-12 p-2 border border-[var(--tui-border)] text-[var(--tui-fg)] active:border-[var(--tui-accent-2)] active:text-[var(--tui-accent-2)]"
+      style="touch-action: manipulation;"
+      phx-click="dpad"
+      phx-value-dir={@dir}
+    >
+      {render_slot(@inner_block)}
+    </button>
     """
   end
 

@@ -1,6 +1,6 @@
 defmodule LobbyTui.Theatre.Render do
   @moduledoc """
-  Pure rendering: state plus frame in, `{widget, rect}` pairs out. The world is a Paragraph of styled spans cropped by a camera that follows the attendee. Per visible cell the compositor layers, back to front: the painted theatre scene, an occupied-seat tint for seats whose occupant is not currently visible, avatar sprites (others first, self last), and floating name labels (others first, self last) — see design doc section D3. The stage feed takes the bottom band once seated; the last line is a one-row status strip that shows the current hint, if any, and is otherwise blank — the HTML `#key-bar` chrome around the embed already carries the always-on move/sit/stand help.
+  Pure rendering: state plus frame in, `{widget, rect}` pairs out. The world is a Paragraph of styled spans cropped by a camera that follows the attendee. Per visible cell the compositor layers, back to front: the painted theatre scene, an occupied-seat tint for seats whose occupant is not currently visible, avatar sprites (others first, self last), and floating name labels (others first, self last) — see design doc section D3. Once seated the camera lifts to the stage and the feed plays there, between the parted curtains, rather than in a band of its own. The last line is a one-row status strip that shows the current hint, if any, and is otherwise blank: the surrounding HTML has no written key legend (its buttons name their own actions), so this row is the only place situational guidance appears.
   """
 
   alias ExRatatui.Frame
@@ -13,8 +13,27 @@ defmodule LobbyTui.Theatre.Render do
   alias LobbyTui.Theatre.State
   alias LobbyTui.World
 
-  @feed_height 8
   @status_height 1
+
+  # -- stage ---------------------------------------------------------------
+
+  # The curtain rows of the painted stage band (rows 12..13 are the apron
+  # and stay put — an apron does not travel with the drape). The opening
+  # grows outward from the proscenium's centre line, which the scene's own
+  # symmetry axis puts at column 88.
+  @stage_curtain_rows 2..11
+  @stage_center_x 88
+
+  # Widest half-opening: out to the wall trim on either side.
+  @stage_max_half 84
+
+  # Rows inside the opening reserved for the feed, newest last, leaving
+  # the top row of the opening as breathing space under the pelmet.
+  @stage_text_rows 4..11
+
+  @stage_interior {:rgb, 16, 10, 22}
+  @stage_author {:rgb, 34, 206, 222}
+  @stage_body {:rgb, 233, 233, 240}
 
   # Off-scene / not-yet-loaded fallback: a plain dark floor cell.
   @floor_span %Span{content: " ", style: %Style{bg: :black}}
@@ -37,19 +56,17 @@ defmodule LobbyTui.Theatre.Render do
 
   @occupancy_marker "▪"
 
+  # The feed used to take a band at the bottom of the frame. It now plays
+  # on the stage itself, inside the world, so the world owns everything
+  # above the status row whether seated or not — one less layout mode, and
+  # the room never resizes underneath the attendee when they sit.
   def widgets(%State{} = state, %Frame{width: fw, height: fh}) do
-    feed_h = if state.seated?, do: min(@feed_height, max(fh - @status_height - 5, 0)), else: 0
-    world_h = max(fh - feed_h - @status_height, 1)
+    world_h = max(fh - @status_height, 1)
 
     world = {world_paragraph(state, fw, world_h), %Rect{x: 0, y: 0, width: fw, height: world_h}}
     status = {status_paragraph(state), %Rect{x: 0, y: fh - 1, width: fw, height: @status_height}}
 
-    if feed_h > 0 do
-      feed = {feed_paragraph(state, feed_h), %Rect{x: 0, y: world_h, width: fw, height: feed_h}}
-      [world, feed, status]
-    else
-      [world, status]
-    end
+    [world, status]
   end
 
   def world_paragraph(state, vw, vh) do
@@ -57,7 +74,7 @@ defmodule LobbyTui.Theatre.Render do
   end
 
   def world_lines(state, vw, vh) do
-    {ox, oy} = camera(state.pos, vw, vh)
+    {ox, oy} = viewport_origin(state, vw, vh)
     x_range = ox..(ox + min(vw, World.width()) - 1)
     y_range = oy..(oy + min(vh, World.height()) - 1)
     overlay = build_overlay(state, x_range, y_range)
@@ -66,6 +83,22 @@ defmodule LobbyTui.Theatre.Render do
       %Line{spans: for(x <- x_range, do: Map.get(overlay, {x, y}) || scene_span({x, y}))}
     end
   end
+
+  @doc """
+  Where the viewport sits in the world.
+
+  Standing, it follows the attendee. Seated, it lifts to the stage and
+  stays there: the curtain is about to go up and the attendee is meant to
+  be watching it, not themselves. Anchoring at the top row also keeps the
+  front rows of the house in shot below the stage, so the room still
+  reads as occupied.
+  """
+  def viewport_origin(%State{seated?: true}, vw, _vh) do
+    max_ox = max(World.width() - vw, 0)
+    {(@stage_center_x - div(vw, 2)) |> max(0) |> min(max_ox), 0}
+  end
+
+  def viewport_origin(%State{pos: pos}, vw, vh), do: camera(pos, vw, vh)
 
   def camera({px, py}, vw, vh) do
     max_ox = max(World.width() - vw, 0)
@@ -93,7 +126,83 @@ defmodule LobbyTui.Theatre.Render do
 
     overlay = paint_self_sprite(overlay, state, x_range, y_range)
     overlay = paint_other_labels(overlay, others_found, x_range, y_range)
-    paint_self_label(overlay, state, x_range, y_range)
+    overlay = paint_self_label(overlay, state, x_range, y_range)
+    paint_stage(overlay, state, x_range, y_range)
+  end
+
+  # -- stage ---------------------------------------------------------------
+
+  # Painted last so the stage band is unambiguously the stage's: nothing
+  # walks up there (rows 2..13 are not walkable), but a tall sprite or a
+  # long label anchored in the front row could otherwise reach into it.
+  defp paint_stage(overlay, %State{curtain: 0}, _x_range, _y_range), do: overlay
+
+  defp paint_stage(overlay, %State{} = state, x_range, y_range) do
+    cols = opening_cols(state.curtain)
+
+    overlay
+    |> open_curtain(cols, x_range, y_range)
+    |> paint_stage_feed(state, cols, x_range, y_range)
+  end
+
+  # The drape parts symmetrically about the centre line, so the opening is
+  # always an even-handed slice of the band.
+  defp opening_cols(curtain) do
+    half = div(curtain * @stage_max_half, LobbyTui.Theatre.curtain_steps())
+    (@stage_center_x - half)..(@stage_center_x + half)
+  end
+
+  defp open_curtain(overlay, cols, x_range, y_range) do
+    for y <- @stage_curtain_rows,
+        y in y_range,
+        x <- cols,
+        x in x_range,
+        into: overlay do
+      {{x, y}, %Span{content: " ", style: %Style{bg: @stage_interior}}}
+    end
+  end
+
+  # Held back until the curtain is all the way open — text creeping out
+  # from behind a moving drape reads as a glitch, not a reveal.
+  defp paint_stage_feed(overlay, %State{feed: feed} = state, cols, x_range, y_range) do
+    if state.curtain < LobbyTui.Theatre.curtain_steps() do
+      overlay
+    else
+      rows = Enum.to_list(@stage_text_rows)
+      # `feed` is newest-first; show the newest on the bottom line so the
+      # stage reads like a transcript rather than a stack.
+      shown = feed |> Enum.take(length(rows)) |> Enum.reverse()
+
+      shown
+      |> Enum.zip(Enum.take(rows, -length(shown)))
+      |> Enum.reduce(overlay, fn {msg, row}, ovl ->
+        paint_stage_line(ovl, msg, row, cols, x_range, y_range)
+      end)
+    end
+  end
+
+  defp paint_stage_line(overlay, msg, row, cols, x_range, y_range) do
+    if row in y_range do
+      author = "#{msg.author_nickname}: "
+      spans = styled_graphemes(author, @stage_author) ++ styled_graphemes(msg.body, @stage_body)
+      spans = Enum.take(spans, Range.size(cols))
+      start_x = cols.first + div(Range.size(cols) - length(spans), 2)
+
+      spans
+      |> Enum.with_index()
+      |> Enum.reduce(overlay, fn {span, i}, ovl ->
+        x = start_x + i
+        if x in x_range, do: Map.put(ovl, {x, row}, span), else: ovl
+      end)
+    else
+      overlay
+    end
+  end
+
+  defp styled_graphemes(text, fg) do
+    for char <- String.graphemes(text) do
+      %Span{content: char, style: %Style{fg: fg, bg: @stage_interior}}
+    end
   end
 
   # Scans the (viewport-bound, not population-bound) expanded anchor box
@@ -277,33 +386,14 @@ defmodule LobbyTui.Theatre.Render do
 
   defp in_ranges?({x, y}, x_range, y_range), do: x in x_range and y in y_range
 
-  # -- feed / status --------------------------------------------------------
+  # -- status ---------------------------------------------------------------
 
-  defp feed_paragraph(%State{feed: feed}, feed_h) do
-    lines =
-      feed
-      |> Enum.take(feed_h - 1)
-      |> Enum.reverse()
-      |> Enum.map(fn msg ->
-        %Line{
-          spans: [
-            %Span{
-              content: "#{msg.author_nickname}: ",
-              style: %Style{fg: :cyan, modifiers: [:bold]}
-            },
-            %Span{content: msg.body, style: %Style{}}
-          ]
-        }
-      end)
-
-    header = %Line{spans: [%Span{content: "── stage ──", style: %Style{fg: :yellow}}]}
-    %Paragraph{text: %Text{lines: [header | lines]}}
-  end
-
-  # Hints only — the always-on unseated/seated help text used to live here
-  # too, but it duplicated the HTML `#key-bar` (owner screenshot feedback).
-  # The row itself stays even with no hint, empty, for layout stability:
-  # hints must not shift the world.
+  # Hints only. An always-on "arrows to move, s to sit" legend used to live
+  # here and again in the HTML around the embed; both are gone, because the
+  # on-screen pad's buttons already name every action they perform. What is
+  # left is the situational half — "seat taken", "press space to stand" —
+  # which only this row knows. It stays even when empty, for layout
+  # stability: a hint appearing must never shift the world.
   defp status_paragraph(%State{hint: hint}) do
     %Paragraph{text: hint || "", style: %Style{fg: :dark_gray}}
   end

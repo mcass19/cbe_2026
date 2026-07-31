@@ -111,6 +111,81 @@ defmodule LobbyTui.TheatreTest do
     assert hinted.hint =~ "seat"
   end
 
+  # The bug this covers: the seat used to be its anchor cell alone, so
+  # standing anywhere else on the painted block silently refused to sit.
+  test "sit works from any cell of the seat's painted block, snapping to the anchor" do
+    seat = fresh_free_seat!()
+    {dx_range, dy_range} = LobbyTui.World.footprint_offsets()
+
+    for {dx, dy} <- [
+          {dx_range.first, dy_range.first},
+          {dx_range.last, dy_range.last},
+          {0, dy_range.first},
+          {dx_range.first, 0}
+        ] do
+      state = mount!()
+      corner = {seat.x + dx, seat.y + dy}
+      seated = press(%{state | pos: corner}, "s")
+
+      assert seated.seated?, "expected to sit from #{inspect(corner)}"
+      assert seated.pos == {seat.x, seat.y}, "expected to snap onto the anchor"
+
+      press(seated, " ")
+    end
+  end
+
+  # The regression: seats are seeded into ETS at boot, and the seat record
+  # was previously looked up by its stored coordinates. Move the world's
+  # geometry and every seat in the house silently stops accepting `s`,
+  # with no error anywhere — the whole room just becomes furniture. Row and
+  # column are the seat's identity and never move, so the lookup uses those.
+  test "every seat in the house is sittable, whatever the seeded coordinates say" do
+    seeded = Lobby.list_seats!()
+    assert length(seeded) == length(LobbyTui.World.seats())
+
+    # Sampled from whatever is free rather than from fixed coordinates —
+    # other tests in this file claim seats too — but spread across distinct
+    # rows so a whole band of the house going dead would still show up.
+    sample =
+      seeded
+      |> Enum.filter(&is_nil(&1.occupant_id))
+      |> Enum.group_by(& &1.row)
+      |> Enum.sort_by(fn {row, _} -> row end)
+      |> Enum.map(fn {_row, seats} -> hd(seats) end)
+      |> Enum.take(5)
+
+    assert length(sample) >= 3, "not enough free seats left to sample the house"
+
+    for record <- sample do
+      world_seat =
+        Enum.find(LobbyTui.World.seats(), &(&1.row == record.row and &1.col == record.col))
+
+      assert world_seat, "seeded seat #{record.row}/#{record.col} is not in the world"
+
+      state = mount!()
+      seated = press(%{state | pos: {world_seat.x, world_seat.y}}, "s")
+
+      assert seated.seated?,
+             "row #{record.row} col #{record.col} at #{inspect({world_seat.x, world_seat.y})} refused to seat"
+
+      press(seated, " ")
+    end
+  end
+
+  test "a seated attendee cannot walk out of their seat" do
+    state = mount!()
+    seat = fresh_free_seat!()
+    seated = press(%{state | pos: {seat.x, seat.y}}, "s")
+    assert seated.seated?
+
+    for dir <- ~w(up down left right) do
+      moved = press(seated, dir)
+      assert moved.pos == {seat.x, seat.y}, "#{dir} moved a seated attendee"
+      assert moved.hint =~ "stand"
+      assert {:ok, _} = Lobby.seat_of(state.attendee.id)
+    end
+  end
+
   test "sit on a taken seat sets a hint" do
     other = mount!()
     seat = fresh_free_seat!()

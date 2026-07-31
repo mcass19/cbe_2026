@@ -36,11 +36,15 @@ defmodule LobbyTui.Scripts.PlaceholderScene do
   @aisle_left 4..7
   @aisle_right (@width - 8)..(@width - 5)
 
-  # Seat rectangle: 12 px wide, 10 px tall (8 px back + 2 px base), the base
-  # bottom-aligned to the seat anchor's own 2-px row band.
-  @seat_width 12
-  @seat_back_height 8
+  # Seat rectangle, derived from `World.footprint_offsets/0` rather than
+  # restated here: the block the painter draws and the block `seat_at/1`
+  # accepts must be the same block, or seats look sittable where they are
+  # not. Cell rows are 2 px tall, so the footprint's 5 rows are 10 px —
+  # split into an 8 px back above a 2 px base.
+  {dx_range, dy_range} = World.footprint_offsets()
+  @seat_dx dx_range
   @seat_base_height 2
+  @seat_back_height Range.size(dy_range) * 2 - @seat_base_height
 
   @slate {70, 74, 82}
   @curtain_a {170, 35, 35}
@@ -132,8 +136,8 @@ defmodule LobbyTui.Scripts.PlaceholderScene do
   # is centered on column x and its 2-px base sits exactly on the anchor
   # row's own px band; the 8-px back rises above it.
   defp seat_pixels(%{x: x, y: y}) do
-    left = x - div(@seat_width, 2)
-    right = left + @seat_width - 1
+    left = x + @seat_dx.first
+    right = x + @seat_dx.last
     base_bottom = y * 2 + 1
     base_top = base_bottom - @seat_base_height + 1
     back_bottom = base_top - 1

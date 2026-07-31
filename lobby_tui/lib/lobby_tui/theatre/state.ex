@@ -13,6 +13,11 @@ defmodule LobbyTui.Theatre.State do
             occupied: %{},
             feed: [],
             seated?: false,
+            # How far the stage curtain has drawn back, 0 (shut) to
+            # `Theatre.curtain_steps/0` (wide open). Animated by
+            # `LobbyTui.Theatre`, consumed by `Render`; sitting drives it
+            # up, standing drives it back down.
+            curtain: 0,
             hint: nil,
             connected?: false,
             refresh_pending?: false,

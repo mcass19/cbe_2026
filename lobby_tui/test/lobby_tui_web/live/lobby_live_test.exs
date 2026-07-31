@@ -153,30 +153,32 @@ defmodule LobbyTuiWeb.LobbyLiveTest do
     assert html =~ "data-confirm"
   end
 
-  test "the keybinding status bar shows the unseated hint, then swaps on sit/stand", %{
-    conn: conn
-  } do
+  # There is no written key legend any more: the pad's buttons name every
+  # action they perform, so a row repeating them was only taking space from
+  # the room. What has to keep working is the pad itself swapping.
+  test "the pad swaps between the arrows and stand, and back again", %{conn: conn} do
     {conn, _attendee} = join_conn(conn)
-    {:ok, view, _html} = live(conn, ~p"/lobby")
+    {:ok, view, html} = live(conn, ~p"/lobby")
     tui = boot_transport(view)
 
-    assert has_element?(view, "#key-bar", "[↑↓←→] move")
-    assert has_element?(view, "#key-bar", "[s] sit")
-    assert has_element?(view, "#key-bar", "walk onto a seat")
-    refute has_element?(view, "#key-bar", "[space] stand")
+    refute html =~ "key-bar"
+    refute html =~ "[↑↓←→]"
+
+    assert has_element?(view, "#d-pad [phx-value-dir='up']")
+    assert has_element?(view, "#sit-button", "sit")
 
     for dir <- path_to(free_seat!()), do: dpad_click(view, tui, dir)
     sit_button_click(view, tui)
 
-    assert has_element?(view, "#key-bar", "[space] stand")
-    assert has_element?(view, "#key-bar", "[enter] send")
-    assert has_element?(view, "#key-bar", "seated")
-    refute has_element?(view, "#key-bar", "[s] sit")
+    # Seated, the arrows are refused by the Theatre and the camera is on
+    # the stage, so the row goes back to the room.
+    refute has_element?(view, "#d-pad [phx-value-dir='up']")
+    assert has_element?(view, "#sit-button", "stand")
 
     sit_button_click(view, tui)
 
-    assert has_element?(view, "#key-bar", "[↑↓←→] move")
-    refute has_element?(view, "#key-bar", "[space] stand")
+    assert has_element?(view, "#d-pad [phx-value-dir='up']")
+    assert has_element?(view, "#sit-button", "sit")
   end
 
   test "d-pad clicks and sitting reveal the chat form; posting shows the message", %{conn: conn} do
