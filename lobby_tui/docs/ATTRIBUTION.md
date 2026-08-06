@@ -4,5 +4,6 @@ Every asset in `priv/sprites_src/` and `priv/scene/` is listed below with its tr
 
 | file | author | source | license |
 | --- | --- | --- | --- |
-| 103 character sprites (monk.png, villager.png, … gus.png — imported 2026-07-16) | Kenney | [1-Bit Pack](https://kenney.nl/assets/1-bit-pack), colored-transparent tilesheet, center-cropped to 12x12 via `priv/scripts/import_sprites.exs` | CC0 |
+| 75 villager sprites (ada.png, gus.png, … jarl.png — imported 2026-08-06) | Kenney | [Roguelike Characters](https://kenney.nl/assets/roguelike-characters), layers composited by `priv/scripts/compose_sprites.exs`, center-cropped to 12x12 via `priv/scripts/import_sprites.exs` | CC0 |
+| 21 bust sprites (wizard.png, knight.png, … mouse.png — imported 2026-08-06) | Kenney | [Tiny Dungeon](https://kenney.nl/assets/tiny-dungeon), center-cropped to 12x12 via `priv/scripts/import_sprites.exs` | CC0 |
 | priv/scene/theatre.png | this repository | `priv/scripts/gen_placeholder_scene.exs` | CC0 |

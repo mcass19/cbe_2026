@@ -35,3 +35,6 @@ lobby_tui-*.tar
 npm-debug.log
 /assets/node_modules/
 
+# Local development notes and specs, never committed.
+/docs/dev/
+
