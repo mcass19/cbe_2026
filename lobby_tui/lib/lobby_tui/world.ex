@@ -21,7 +21,7 @@ defmodule LobbyTui.World do
   rate with nothing on screen marking the live cell. `seat_at/1` therefore
   resolves any cell of the block to its seat, and `Theatre` snaps the
   attendee onto the anchor when they sit, so seated avatars line up and
-  the occupancy tint keeps a single known cell to paint.
+  the reserved-chair wash keeps a single known anchor to paint around.
 
   `footprint_offsets/0` is the one definition of that block. The scene
   painter derives its rectangle from it rather than restating the numbers,

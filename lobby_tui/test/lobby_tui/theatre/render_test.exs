@@ -39,6 +39,11 @@ defmodule LobbyTui.Theatre.RenderTest do
 
   defp cell(lines, x, y), do: lines |> Enum.at(y) |> Map.fetch!(:spans) |> Enum.at(x)
 
+  # Mirrors Render's wash: 55% occupant color over the scene's own pixel.
+  defp washed({:rgb, r, g, b}, {:rgb, tr, tg, tb}) do
+    {:rgb, round(r * 0.45 + tr * 0.55), round(g * 0.45 + tg * 0.55), round(b * 0.45 + tb * 0.55)}
+  end
+
   test "camera clamps to world bounds" do
     # viewport 80x40 inside a 176x96 world; max_ox = 176 - 80 = 96, max_oy = 96 - 40 = 56
     # near top-left corner: ox = 5 - div(80, 2) = 5 - 40 = -35 -> clamped to 0
@@ -212,6 +217,55 @@ defmodule LobbyTui.Theatre.RenderTest do
 
     lines = Render.world_lines(occupied, 176, 96)
     assert cell(lines, 10, 18) == %Span{content: "▪", style: %Style{fg: :red}}
+  end
+
+  test "a held seat with an rgb occupant color washes the chair cells toward that color" do
+    seat = {10, 18}
+    color = {:rgb, 40, 200, 220}
+    scene_fg = {:rgb, 100, 100, 100}
+    scene_bg = {:rgb, 50, 50, 50}
+
+    # Stub a uniform scene patch around the seat so the wash has chair
+    # pixels to blend.
+    put_scene(
+      for x <- 0..20, y <- 10..20, into: %{} do
+        {{x, y}, {"▀", scene_fg, scene_bg}}
+      end
+    )
+
+    occupied = %{state({88, 88}) | occupied: %{seat => %{id: "someone-else", color: color}}}
+    lines = Render.world_lines(occupied, 176, 96)
+
+    # The wash covers the chair core: the footprint minus the breathing
+    # column on each side. Every washed cell keeps the scene's glyph but
+    # blends both colors toward the occupant's.
+    for dx <- -5..4, dy <- -4..0 do
+      {x, y} = {elem(seat, 0) + dx, elem(seat, 1) + dy}
+
+      assert cell(lines, x, y) == %Span{
+               content: "▀",
+               style: %Style{fg: washed(scene_fg, color), bg: washed(scene_bg, color)}
+             },
+             "expected washed scene cell at #{inspect({x, y})}"
+    end
+
+    # One column outside the chair core on each side stays pure scene.
+    for {x, y} <- [{10 - 6, 18}, {10 + 5, 18}] do
+      assert cell(lines, x, y) == %Span{
+               content: "▀",
+               style: %Style{fg: scene_fg, bg: scene_bg}
+             }
+    end
+  end
+
+  test "a held seat with an rgb color but no loaded scene falls back to the marker" do
+    seat = {10, 18}
+    color = {:rgb, 40, 200, 220}
+    occupied = %{state({88, 88}) | occupied: %{seat => %{id: "someone-else", color: color}}}
+
+    # Setup leaves the scene empty: there is no chair to wash.
+    lines = Render.world_lines(occupied, 176, 96)
+    assert cell(lines, 10, 18) == %Span{content: "▪", style: %Style{fg: color}}
   end
 
   test "an occupied seat with the occupant's sprite on it shows the sprite, not the marker" do

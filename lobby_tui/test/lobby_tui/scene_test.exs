@@ -18,18 +18,18 @@ defmodule LobbyTui.SceneTest do
 
   test "a stage-band cell carries a curtain palette color" do
     palette = PlaceholderScene.palette()
-    curtain_colors = [rgb(palette.curtain_a), rgb(palette.curtain_b)]
+    curtain_colors = Enum.map(palette.curtain_folds, &rgb/1)
 
-    # A row inside the drape, below the apron; col 30 sits well away from
-    # the trim and the aisle margins.
+    # A row inside the drape, below the valance; col 30 sits well away from
+    # the trim and the curtain's edge shadows.
     row = World.stage_rows().last - 1
     assert {_char, fg, bg} = Scene.cell({30, row})
     assert fg in curtain_colors or bg in curtain_colors
   end
 
-  test "a lobby-band cell differs from the auditorium floor dither" do
+  test "a lobby-band cell differs from the auditorium floorboards" do
     palette = PlaceholderScene.palette()
-    floor_colors = [rgb(palette.floor_a), rgb(palette.floor_b)]
+    floor_colors = [rgb(palette.floor), rgb(palette.floor_seam), rgb(palette.floor_hi)]
 
     # A row inside the lobby carpet, clear of the dithered edge that faces
     # the seats; col 50 avoids the trim and aisle margins.

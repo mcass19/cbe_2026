@@ -198,8 +198,8 @@ defmodule LobbyTui.Theatre do
 
   # Any cell of a seat's painted block sits in it (see `World`), so the
   # attendee is snapped onto the anchor on the way down. That keeps seated
-  # avatars aligned to the seat they are actually in, and leaves the
-  # occupancy tint one known cell to paint.
+  # avatars aligned to the seat they are actually in, and gives the
+  # reserved-chair wash a known anchor to paint around.
   defp try_sit(%State{pos: pos} = state) do
     with %{} = world_seat <- World.seat_at(pos),
          %{} = seat <- find_seat_record(world_seat),

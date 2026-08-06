@@ -1,6 +1,6 @@
 defmodule LobbyTui.Theatre.Render do
   @moduledoc """
-  Pure rendering: state plus frame in, `{widget, rect}` pairs out. The world is a Paragraph of styled spans cropped by a camera that follows the attendee. Per visible cell the compositor layers, back to front: the painted theatre scene, an occupied-seat tint for seats whose occupant is not currently visible, avatar sprites (others first, self last), and floating name labels (others first, self last) — see design doc section D3. Once seated the camera lifts to the stage and the feed plays there, between the parted curtains, rather than in a band of its own. The last line is a one-row status strip that shows the current hint, if any, and is otherwise blank: the surrounding HTML has no written key legend (its buttons name their own actions), so this row is the only place situational guidance appears.
+  Pure rendering: state plus frame in, `{widget, rect}` pairs out. The world is a Paragraph of styled spans cropped by a camera that follows the attendee. Per visible cell the compositor layers, back to front: the painted theatre scene, a reserved-chair wash for seats whose occupant is temporarily gone (the disconnect grace window — standing frees a seat immediately, so held-but-empty only means "reconnecting"), avatar sprites (others first, self last), and floating name labels (others first, self last) — see design doc section D3. Once seated the camera lifts to the stage and the feed plays there, between the parted curtains, rather than in a band of its own. The last line is a one-row status strip that shows the current hint, if any, and is otherwise blank: the surrounding HTML has no written key legend (its buttons name their own actions), so this row is the only place situational guidance appears.
   """
 
   alias ExRatatui.Frame
@@ -54,6 +54,18 @@ defmodule LobbyTui.Theatre.Render do
   @label_offset 6
 
   @occupancy_marker "▪"
+
+  # The chair core inside a seat footprint: the scene painter leaves one
+  # column of floor on each side of the footprint, so the wash covers
+  # exactly the painted chair and nothing else.
+  {footprint_dx, footprint_dy} = World.footprint_offsets()
+  @held_dx (footprint_dx.first + 1)..(footprint_dx.last - 1)
+  @held_dy footprint_dy
+  @held_margin_x max(abs(@held_dx.first), abs(@held_dx.last))
+  @held_margin_y max(abs(@held_dy.first), abs(@held_dy.last))
+
+  # The occupant color's share when washing a held chair's own pixels.
+  @held_mix 0.55
 
   # The feed used to take a band at the bottom of the frame. It now plays
   # on the stage itself, inside the world, so the world owns everything
@@ -354,19 +366,77 @@ defmodule LobbyTui.Theatre.Render do
   defp label_style(color, true), do: %Style{fg: color, modifiers: [:bold]}
   defp label_style(color, false), do: %Style{fg: color}
 
-  # -- occupied-seat tint --------------------------------------------------
+  # -- reserved-chair wash --------------------------------------------------
 
-  # `state.occupied` is bounded by the fixed seat count (120, a world
+  # `state.occupied` is bounded by the fixed seat count (80, a world
   # constant — never grows with attendee population), and is further
-  # filtered to the viewport before any work happens.
+  # filtered to the viewport before any work happens. The anchor filter
+  # uses the wash's own margins so a chair straddling the viewport edge
+  # still paints its visible cells.
   defp paint_tints(overlay, %State{} = state, x_range, y_range) do
+    hx_range = expand(x_range, @held_margin_x)
+    hy_range = expand(y_range, @held_margin_y)
+
     state.occupied
-    |> Enum.filter(fn {pos, _occupant} -> in_ranges?(pos, x_range, y_range) end)
+    |> Enum.filter(fn {pos, _occupant} -> in_ranges?(pos, hx_range, hy_range) end)
     |> Enum.reject(fn {pos, _occupant} -> anchored?(state, pos) end)
     |> Enum.reduce(overlay, fn {pos, %{color: color}}, ovl ->
-      Map.put(ovl, pos, %Span{content: @occupancy_marker, style: %Style{fg: color}})
+      paint_held_seat(ovl, pos, color, x_range, y_range)
     end)
   end
+
+  # A held seat means its occupant is inside the disconnect grace window:
+  # standing or leaving frees a seat immediately, so the only way a claimed
+  # chair sits empty is an occupant who may be about to come back. The
+  # chair keeps its own pixel art but washed toward the occupant's color,
+  # so "taken, they're reconnecting" reads at a glance.
+  defp paint_held_seat(overlay, {ax, ay} = pos, {:rgb, _r, _g, _b} = color, x_range, y_range) do
+    if Scene.loaded?() do
+      for dx <- @held_dx,
+          dy <- @held_dy,
+          cell_pos = {ax + dx, ay + dy},
+          in_ranges?(cell_pos, x_range, y_range),
+          scene_cell = Scene.cell(cell_pos),
+          scene_cell != nil,
+          reduce: overlay do
+        ovl ->
+          {char, fg, bg} = scene_cell
+
+          Map.put(ovl, cell_pos, %Span{
+            content: char,
+            style: %Style{fg: wash(fg, color), bg: wash(bg, color)}
+          })
+      end
+    else
+      paint_held_marker(overlay, pos, color, x_range, y_range)
+    end
+  end
+
+  # Occupant colors are `{:rgb, _, _, _}` in practice (the avatar's
+  # dominant color, fetched at claim time); a named-atom color is the
+  # presence-miss fallback and cannot be blended, so it keeps the compact
+  # marker. Same for a missing scene: there is no chair to wash.
+  defp paint_held_seat(overlay, pos, color, x_range, y_range) do
+    paint_held_marker(overlay, pos, color, x_range, y_range)
+  end
+
+  defp paint_held_marker(overlay, pos, color, x_range, y_range) do
+    if in_ranges?(pos, x_range, y_range) do
+      Map.put(overlay, pos, %Span{content: @occupancy_marker, style: %Style{fg: color}})
+    else
+      overlay
+    end
+  end
+
+  defp wash({:rgb, r, g, b}, {:rgb, tr, tg, tb}) do
+    {:rgb, mix(r, tr), mix(g, tg), mix(b, tb)}
+  end
+
+  # A scene cell's fg/bg is always rgb today; anything else passes through
+  # unwashed rather than guessing at a blend.
+  defp wash(other, _color), do: other
+
+  defp mix(base, tint), do: round(base * (1 - @held_mix) + tint * @held_mix)
 
   defp anchored?(%State{pos: pos}, seat_pos) when pos == seat_pos, do: true
   defp anchored?(%State{others_by_pos: others}, seat_pos), do: Map.has_key?(others, seat_pos)
