@@ -12,6 +12,10 @@ defmodule LobbyTui.Theatre.State do
             others_by_pos: %{},
             occupied: %{},
             feed: [],
+            # How many of the newest feed messages are scrolled out of
+            # view below; 0 means pinned to the newest. Driven by the
+            # seated up/down keys, consumed by `Render`.
+            feed_scroll: 0,
             seated?: false,
             # How far the stage curtain has drawn back, 0 (shut) to
             # `Theatre.curtain_steps/0` (wide open). Animated by
@@ -37,6 +41,18 @@ defmodule LobbyTui.Theatre.State do
       color: color,
       avatar_cache: avatar_cache
     }
+  end
+
+  @doc """
+  Leafs through the feed history by `delta` (positive toward older
+  messages), clamped so the view can neither scroll past the oldest
+  message nor below the newest. `visible` is how many feed lines the
+  stage shows at once — the caller reads it from `Render`, keeping this
+  transition pure.
+  """
+  def scroll_feed(%__MODULE__{} = state, delta, visible) do
+    max_scroll = max(length(state.feed) - visible, 0)
+    %{state | feed_scroll: (state.feed_scroll + delta) |> max(0) |> min(max_scroll)}
   end
 
   def step(%__MODULE__{pos: {x, y}} = state, direction) do

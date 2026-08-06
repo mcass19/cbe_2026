@@ -181,8 +181,13 @@ defmodule LobbyTui.TheatreTest do
     for dir <- ~w(up down left right) do
       moved = press(seated, dir)
       assert moved.pos == {seat.x, seat.y}, "#{dir} moved a seated attendee"
-      assert moved.hint =~ "stand"
       assert {:ok, _} = Lobby.seat_of(state.attendee.id)
+    end
+
+    # Left/right hint toward standing; up/down leaf the stage feed instead
+    # (see the "seated feed scrolling" describe).
+    for dir <- ~w(left right) do
+      assert press(seated, dir).hint =~ "stand"
     end
   end
 
@@ -214,15 +219,78 @@ defmodule LobbyTui.TheatreTest do
     assert limited.hint =~ "slow down"
   end
 
-  test "seated + arrow key does not move, hints to stand" do
+  test "seated + left/right does not move, hints to stand" do
     state = mount!()
     seat = fresh_free_seat!()
     seated = press(%{state | pos: {seat.x, seat.y}}, "s")
     assert seated.seated?
 
-    moved = press(seated, "up")
+    moved = press(seated, "left")
     assert moved.pos == seated.pos
     assert moved.hint =~ "press space to stand"
+  end
+
+  describe "seated feed scrolling" do
+    alias LobbyTui.Theatre.{Render, State}
+
+    # Scrolling is a pure state transition, so these build State directly
+    # instead of walking the join/sit flow.
+    defp seated_with_feed(count) do
+      attendee = %LobbyTui.Lobby.Attendee{id: "self", nickname: "me", avatar_id: nil}
+      feed = for i <- count..1//-1, do: %{id: i, author_nickname: "n", body: "m#{i}"}
+      %{State.new(attendee, :cyan) | seated?: true, feed: feed}
+    end
+
+    test "up leafs toward older messages, clamped at the feed's end" do
+      # Two more messages than the stage shows: max scroll is exactly 2.
+      state = seated_with_feed(Render.stage_line_count() + 2)
+
+      once = press(state, "up")
+      assert once.feed_scroll == 1
+
+      settled = Enum.reduce(1..10, state, fn _press, acc -> press(acc, "up") end)
+      assert settled.feed_scroll == 2
+    end
+
+    test "up does nothing when the whole feed already fits on stage" do
+      state = seated_with_feed(2)
+      assert press(state, "up").feed_scroll == 0
+    end
+
+    test "down leafs back toward the newest, clamped at zero" do
+      state = %{seated_with_feed(Render.stage_line_count() + 2) | feed_scroll: 1}
+
+      back = press(state, "down")
+      assert back.feed_scroll == 0
+      assert press(back, "down").feed_scroll == 0
+    end
+
+    test "a scrolled reader keeps their place when a new message lands" do
+      state = %{seated_with_feed(12) | feed_scroll: 3}
+
+      broadcast = %Phoenix.Socket.Broadcast{
+        topic: "lobby:stage",
+        event: "create",
+        payload: %Ash.Notifier.Notification{data: %{id: 99, author_nickname: "x", body: "new"}}
+      }
+
+      {:noreply, landed} = Theatre.handle_info(broadcast, state)
+      assert length(landed.feed) == 13
+      assert landed.feed_scroll == 4
+    end
+
+    test "pinned to newest stays pinned when a new message lands" do
+      state = seated_with_feed(12)
+
+      broadcast = %Phoenix.Socket.Broadcast{
+        topic: "lobby:stage",
+        event: "create",
+        payload: %Ash.Notifier.Notification{data: %{id: 99, author_nickname: "x", body: "new"}}
+      }
+
+      {:noreply, landed} = Theatre.handle_info(broadcast, state)
+      assert landed.feed_scroll == 0
+    end
   end
 
   test "seated + space frees the seat, clears seated? and the feed" do

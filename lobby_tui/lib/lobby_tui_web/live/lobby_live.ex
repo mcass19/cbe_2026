@@ -83,9 +83,10 @@ defmodule LobbyTuiWeb.LobbyLive do
       </form>
 
       <%!--
-        Seated, there is nowhere to walk to — the arrows are refused by the
-        Theatre and the camera is on the stage anyway — so the pad collapses
-        to the one action that applies and gives the room back a row.
+        Seated, there is nowhere to walk to — left/right are refused by the
+        Theatre and the camera is on the stage anyway — so the pad keeps
+        only what still acts: ▲▼ leaf back through the feed playing on the
+        stage, and the seat button stands back up.
       --%>
       <div id="d-pad" class="shrink-0 flex justify-center items-end gap-4 select-none">
         <div :if={not @seated?} class="grid grid-cols-3 gap-1">
@@ -95,6 +96,10 @@ defmodule LobbyTuiWeb.LobbyLive do
           <.pad_button dir="left">◄</.pad_button>
           <.pad_button dir="down">▼</.pad_button>
           <.pad_button dir="right">►</.pad_button>
+        </div>
+        <div :if={@seated?} class="flex gap-1">
+          <.pad_button dir="up">▲</.pad_button>
+          <.pad_button dir="down">▼</.pad_button>
         </div>
         <.pad_button id="sit-button" dir={if @seated?, do: " ", else: "s"}>
           {if @seated?, do: "stand", else: "sit"}

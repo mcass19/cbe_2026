@@ -42,18 +42,24 @@ defmodule LobbyTui.Theatre do
   @impl true
   def render(state, frame), do: Render.widgets(state, frame)
 
+  # Seated, up/down leafs back and forward through the feed history
+  # playing on the stage; the offset is clamped to what the feed holds.
   @impl true
-  def handle_event(%Key{code: code, kind: "press"}, %State{seated?: true} = state)
-      when code in ["up", "down", "left", "right"] do
-    {:noreply, State.hint(state, "press space to stand")}
+  def handle_event(%Key{code: "up", kind: "press"}, %State{seated?: true} = state) do
+    {:noreply, State.scroll_feed(state, 1, Render.stage_line_count())}
   end
 
-  # Seated attendees are pinned. The camera has panned to the stage by
-  # this point, so a step would move them somewhere they cannot see while
-  # they still hold the seat — and silently walking out of a claimed seat
-  # is exactly the split-brain the seat keeper exists to prevent.
+  def handle_event(%Key{code: "down", kind: "press"}, %State{seated?: true} = state) do
+    {:noreply, State.scroll_feed(state, -1, Render.stage_line_count())}
+  end
+
+  # Seated attendees are otherwise pinned. The camera has panned to the
+  # stage by this point, so a step would move them somewhere they cannot
+  # see while they still hold the seat — and silently walking out of a
+  # claimed seat is exactly the split-brain the seat keeper exists to
+  # prevent.
   def handle_event(%Key{code: code, kind: "press"}, %State{seated?: true} = state)
-      when code in ["up", "down", "left", "right"] do
+      when code in ["left", "right"] do
     {:noreply, State.hint(state, "press space to stand")}
   end
 
@@ -154,7 +160,17 @@ defmodule LobbyTui.Theatre do
     if Enum.any?(state.feed, &(&1.id == message.id)) do
       {:noreply, state}
     else
-      {:noreply, %{state | feed: Enum.take([message | state.feed], 50)}}
+      feed = Enum.take([message | state.feed], 50)
+
+      # A reader scrolled back in history keeps their place when a new
+      # message lands (the prepend would otherwise shift the view by one);
+      # pinned-to-newest stays pinned.
+      scroll =
+        if state.feed_scroll > 0,
+          do: min(state.feed_scroll + 1, length(feed) - 1),
+          else: 0
+
+      {:noreply, %{state | feed: feed, feed_scroll: scroll}}
     end
   end
 
@@ -221,7 +237,7 @@ defmodule LobbyTui.Theatre do
   defp try_stand(%State{attendee: attendee} = state) do
     with {:ok, seat} <- Lobby.seat_of(attendee.id),
          {:ok, _} <- Lobby.stand(seat, actor: attendee) do
-      %{state | seated?: false, feed: []} |> State.hint(nil) |> schedule_curtain()
+      %{state | seated?: false, feed: [], feed_scroll: 0} |> State.hint(nil) |> schedule_curtain()
     else
       _ -> state
     end
@@ -232,7 +248,9 @@ defmodule LobbyTui.Theatre do
 
   defp say(state, body) do
     case Lobby.post_message(body, actor: state.attendee) do
-      {:ok, message} -> %{state | feed: Enum.take([message | state.feed], 50)}
+      # Posting jumps the view back to the newest line — your own message
+      # should never land off-screen.
+      {:ok, message} -> %{state | feed: Enum.take([message | state.feed], 50), feed_scroll: 0}
       {:error, %Ash.Error.Forbidden{}} -> forbidden_hint(state)
       {:error, _invalid} -> State.hint(state, "message must be 1–200 chars")
     end
@@ -253,7 +271,7 @@ defmodule LobbyTui.Theatre do
 
   defp load_feed(state) do
     case Lobby.stage_feed(actor: state.attendee) do
-      {:ok, feed} -> %{state | feed: feed}
+      {:ok, feed} -> %{state | feed: feed, feed_scroll: 0}
       {:error, _} -> state
     end
   end

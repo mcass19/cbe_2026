@@ -170,14 +170,16 @@ defmodule LobbyTuiWeb.LobbyLiveTest do
     for dir <- path_to(free_seat!()), do: dpad_click(view, tui, dir)
     sit_button_click(view, tui)
 
-    # Seated, the arrows are refused by the Theatre and the camera is on
-    # the stage, so the row goes back to the room.
-    refute has_element?(view, "#d-pad [phx-value-dir='up']")
+    # Seated, walking is off the table but ▲▼ leaf the stage feed, so the
+    # pad keeps those two and drops the sideways arrows.
+    assert has_element?(view, "#d-pad [phx-value-dir='up']")
+    assert has_element?(view, "#d-pad [phx-value-dir='down']")
+    refute has_element?(view, "#d-pad [phx-value-dir='left']")
     assert has_element?(view, "#sit-button", "stand")
 
     sit_button_click(view, tui)
 
-    assert has_element?(view, "#d-pad [phx-value-dir='up']")
+    assert has_element?(view, "#d-pad [phx-value-dir='left']")
     assert has_element?(view, "#sit-button", "sit")
   end
 

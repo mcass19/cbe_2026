@@ -34,6 +34,12 @@ defmodule LobbyTui.Theatre.Render do
   @stage_author {:rgb, 34, 206, 222}
   @stage_body {:rgb, 233, 233, 240}
 
+  @doc """
+  How many feed lines the stage shows at once. `Theatre` reads this to
+  clamp the seated scroll offset without restating the stage geometry.
+  """
+  def stage_line_count, do: Range.size(@stage_text_rows)
+
   # Off-scene / not-yet-loaded fallback: a plain dark floor cell.
   @floor_span %Span{content: " ", style: %Style{bg: :black}}
 
@@ -64,8 +70,9 @@ defmodule LobbyTui.Theatre.Render do
   @held_margin_x max(abs(@held_dx.first), abs(@held_dx.last))
   @held_margin_y max(abs(@held_dy.first), abs(@held_dy.last))
 
-  # The occupant color's share when washing a held chair's own pixels.
-  @held_mix 0.55
+  # The occupant color's share when washing a held chair's own pixels —
+  # a subtle wash, enough to read as "taken" without shouting.
+  @held_mix 0.35
 
   # The feed used to take a band at the bottom of the frame. It now plays
   # on the stage itself, inside the world, so the world owns everything
@@ -182,21 +189,30 @@ defmodule LobbyTui.Theatre.Render do
     else
       rows = Enum.to_list(@stage_text_rows)
       # `feed` is newest-first; show the newest on the bottom line so the
-      # stage reads like a transcript rather than a stack.
-      shown = feed |> Enum.take(length(rows)) |> Enum.reverse()
+      # stage reads like a transcript rather than a stack. `feed_scroll`
+      # skips that many of the newest messages, leafing back in history.
+      shown =
+        feed
+        |> Enum.drop(state.feed_scroll)
+        |> Enum.take(length(rows))
+        |> Enum.reverse()
 
       shown
       |> Enum.zip(Enum.take(rows, -length(shown)))
       |> Enum.reduce(overlay, fn {msg, row}, ovl ->
-        paint_stage_line(ovl, msg, row, cols, x_range, y_range)
+        paint_stage_line(ovl, msg, row, cols, state.avatar_cache, x_range, y_range)
       end)
     end
   end
 
-  defp paint_stage_line(overlay, msg, row, cols, x_range, y_range) do
+  defp paint_stage_line(overlay, msg, row, cols, avatar_cache, x_range, y_range) do
     if row in y_range do
       author = "#{msg.author_nickname}: "
-      spans = styled_graphemes(author, @stage_author) ++ styled_graphemes(msg.body, @stage_body)
+
+      spans =
+        styled_graphemes(author, author_color(msg, avatar_cache)) ++
+          styled_graphemes(msg.body, @stage_body)
+
       spans = Enum.take(spans, Range.size(cols))
       start_x = cols.first + div(Range.size(cols) - length(spans), 2)
 
@@ -214,6 +230,17 @@ defmodule LobbyTui.Theatre.Render do
   defp styled_graphemes(text, fg) do
     for char <- String.graphemes(text) do
       %Span{content: char, style: %Style{fg: fg, bg: @stage_interior}}
+    end
+  end
+
+  # The author's nickname plays in their avatar's dominant color, tying
+  # the line on stage to the sprite in the house. Messages without a
+  # resolvable avatar (author long gone in a fixture, cache miss) keep the
+  # neutral stage color.
+  defp author_color(msg, avatar_cache) do
+    case sprite_entry(Map.get(msg, :author_avatar_id), avatar_cache) do
+      %{color: {:rgb, _, _, _} = color} -> color
+      _no_entry -> @stage_author
     end
   end
 

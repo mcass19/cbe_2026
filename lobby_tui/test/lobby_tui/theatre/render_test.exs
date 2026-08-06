@@ -39,9 +39,9 @@ defmodule LobbyTui.Theatre.RenderTest do
 
   defp cell(lines, x, y), do: lines |> Enum.at(y) |> Map.fetch!(:spans) |> Enum.at(x)
 
-  # Mirrors Render's wash: 55% occupant color over the scene's own pixel.
+  # Mirrors Render's wash: 35% occupant color over the scene's own pixel.
   defp washed({:rgb, r, g, b}, {:rgb, tr, tg, tb}) do
-    {:rgb, round(r * 0.45 + tr * 0.55), round(g * 0.45 + tg * 0.55), round(b * 0.45 + tb * 0.55)}
+    {:rgb, round(r * 0.65 + tr * 0.35), round(g * 0.65 + tg * 0.35), round(b * 0.65 + tb * 0.35)}
   end
 
   test "camera clamps to world bounds" do
@@ -427,6 +427,42 @@ defmodule LobbyTui.Theatre.RenderTest do
       assert length(text) == 2
       assert List.first(text) =~ "gus: first"
       assert List.last(text) =~ "ana: second"
+    end
+
+    test "a scrolled feed leafs back: newest hidden, an older message on the bottom line" do
+      steps = LobbyTui.Theatre.curtain_steps()
+      feed = [msg("c", "newest"), msg("b", "middle"), msg("a", "oldest")]
+      scrolled = %{seated_state(steps, feed) | feed_scroll: 1}
+
+      text =
+        Render.world_lines(scrolled, 176, @vh) |> stage_text() |> Enum.reject(&(&1 == ""))
+
+      assert List.last(text) =~ "b: middle"
+      assert List.first(text) =~ "a: oldest"
+      refute Enum.any?(text, &(&1 =~ "newest"))
+    end
+
+    test "the author's nickname plays in their avatar's dominant color" do
+      steps = LobbyTui.Theatre.curtain_steps()
+      feed = [%{author_nickname: "gus", body: "hi", author_avatar_id: "av"}]
+      lines = Render.world_lines(seated_state(steps, feed), 176, @vh)
+
+      bottom = World.stage_rows().last - 1
+      spans = lines |> Enum.at(bottom - seated_origin_y()) |> Map.fetch!(:spans)
+
+      # "av"'s cache entry carries color {:rgb, 9, 9, 9}.
+      assert Enum.any?(spans, &(&1.content == "g" and &1.style.fg == {:rgb, 9, 9, 9}))
+    end
+
+    test "a message without a resolvable avatar keeps the neutral author color" do
+      steps = LobbyTui.Theatre.curtain_steps()
+      no_cache = %{seated_state(steps, [msg("ana", "yo")]) | avatar_cache: %{}}
+      lines = Render.world_lines(no_cache, 176, @vh)
+
+      bottom = World.stage_rows().last - 1
+      spans = lines |> Enum.at(bottom - seated_origin_y()) |> Map.fetch!(:spans)
+
+      assert Enum.any?(spans, &(&1.content == "a" and &1.style.fg == {:rgb, 34, 206, 222}))
     end
 
     test "messages stay hidden until the curtain is all the way open" do
