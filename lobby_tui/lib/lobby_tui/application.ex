@@ -23,6 +23,10 @@ defmodule LobbyTui.Application do
       LobbyTuiWeb.Endpoint
     ]
 
+    # The SSH entry point is opt-in per environment: on in production,
+    # `LOBBY_SSH=1` in development, off under test.
+    children = children ++ Enum.reject([LobbyTui.Ssh.daemon_spec()], &is_nil/1)
+
     LobbyTui.Lobby.Seeder.seed_seats!()
 
     # See https://hexdocs.pm/elixir/Supervisor.html

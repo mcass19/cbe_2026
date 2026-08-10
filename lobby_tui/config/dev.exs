@@ -77,3 +77,7 @@ config :phoenix_live_view,
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
+
+# The SSH entry point is opt-in in development: start the server with
+# LOBBY_SSH=1 to bring the daemon up on port 2222 (see config/runtime.exs).
+config :lobby_tui, :ssh, enabled: false

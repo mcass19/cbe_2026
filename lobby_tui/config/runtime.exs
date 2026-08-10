@@ -20,6 +20,13 @@ if System.get_env("PHX_SERVER") do
   config :lobby_tui, LobbyTuiWeb.Endpoint, server: true
 end
 
+# The SSH entry point, opt-in outside production so a development
+# machine only listens when asked: LOBBY_SSH=1 mix phx.server, then
+# ssh <nickname>@localhost -p 2222.
+if config_env() != :prod and System.get_env("LOBBY_SSH") do
+  config :lobby_tui, :ssh, enabled: true
+end
+
 if config_env() == :prod do
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
@@ -32,6 +39,16 @@ if config_env() == :prod do
       environment variable SECRET_KEY_BASE is missing.
       You can generate one by calling: mix phx.gen.secret
       """
+
+  # The SSH entry point is always on in production. SSH_HOST_KEY holds
+  # the base64 of a private ed25519 host key (see the README's Deploying
+  # section) so the fingerprint survives redeploys; without it the
+  # daemon generates a throwaway key on every boot and returning
+  # clients get a changed-host-key warning.
+  config :lobby_tui, :ssh,
+    enabled: true,
+    port: String.to_integer(System.get_env("SSH_PORT") || "2222"),
+    host_key_base64: System.get_env("SSH_HOST_KEY")
 
   host = System.get_env("PHX_HOST") || "example.com"
   port = String.to_integer(System.get_env("PORT") || "4000")
