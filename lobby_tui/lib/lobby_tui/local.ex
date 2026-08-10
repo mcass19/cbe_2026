@@ -13,25 +13,45 @@ defmodule LobbyTui.Local do
   `avatar_name` picks a seeded avatar by name (the PNG filename minus the extension, e.g. `"monk"`); when omitted, or when the name does not match any seeded avatar, one is picked at random.
 
   Passes `quit?: true` to `Theatre.mount/1` — press `q` to leave. This is a local-terminal-only affordance: the browser embed never sets it, so a stray "q" typed into the room from a browser tab cannot kill that attendee's TUI process.
+
+  Returns `:ok` when the session ends normally and `{:error, reason}` when the server exits abnormally or the terminal cannot be initialised (for example, no TTY). Exits are trapped for the duration of the call (the flag is restored afterwards), so a server crash lands here instead of killing the caller — and in every case the attendee row is removed before returning, keeping the nickname free for the next attempt.
   """
   def run(nickname, avatar_name \\ nil) do
     avatar = pick_avatar(avatar_name)
     attendee = Lobby.join!(nickname, avatar.id)
+    trapping? = Process.flag(:trap_exit, true)
 
-    {:ok, server} =
-      ExRatatui.Server.start_link(
-        mod: LobbyTui.Theatre,
-        transport: :local,
-        attendee: attendee,
-        quit?: true
-      )
+    try do
+      case ExRatatui.Server.start_link(
+             mod: LobbyTui.Theatre,
+             transport: :local,
+             attendee: attendee,
+             quit?: true
+           ) do
+        {:ok, server} ->
+          receive do
+            {:EXIT, ^server, reason} when reason in [:normal, :shutdown] -> :ok
+            {:EXIT, ^server, reason} -> {:error, reason}
+          end
 
-    ref = Process.monitor(server)
+        {:error, reason} ->
+          flush_exit()
+          {:error, reason}
+      end
+    after
+      Process.flag(:trap_exit, trapping?)
+      Lobby.leave(attendee)
+    end
+  end
 
+  # A failed start_link may still deliver the dead server's {:EXIT, _, _}
+  # message (exits are being trapped); drop it so the caller's mailbox — the
+  # iex shell, typically — is left as found.
+  defp flush_exit do
     receive do
-      {:DOWN, ^ref, :process, ^server, _reason} ->
-        Lobby.leave(attendee)
-        :ok
+      {:EXIT, _pid, _reason} -> :ok
+    after
+      0 -> :ok
     end
   end
 

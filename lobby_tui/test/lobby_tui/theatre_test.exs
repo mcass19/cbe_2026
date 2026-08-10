@@ -29,6 +29,13 @@ defmodule LobbyTui.TheatreTest do
     state
   end
 
+  # LobbyTui.Local hands Theatre straight to ExRatatui.Server, which calls
+  # __runtime__/0 at init — a module that only declares the behaviour crashes
+  # the server with an UndefinedFunctionError before mount ever runs.
+  test "exposes the callbacks runtime ExRatatui.Server requires" do
+    assert Theatre.__runtime__() == :callbacks
+  end
+
   test "mounts at the spawn point, unseated, with the avatar's color" do
     state = mount!()
     assert state.pos == LobbyTui.World.spawn_point()

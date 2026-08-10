@@ -45,9 +45,4 @@ The deployed instance runs in the EU (Fly.io, `ams` region).
 ## Who is responsible
 
 Controller: Mauricio Cassola.
-
-PRIVACY_CONTACT: <to fill in>
-
-## Age
-
-This demo is not directed at children under 16 and is not designed to appeal to them. Please do not use it if under that age.
+mauricass19@gmail.com

@@ -3,7 +3,7 @@ defmodule LobbyTui.Theatre do
   The one TUI module. Runs unchanged in the browser (via `PhoenixExRatatui.LiveComponent`), a local terminal, and — pass two — SSH. Pure state transitions live in `State`; rendering in `Render`; this module owns the ExRatatui callbacks and the side effects (Ash actions, and once connected, Presence/PubSub).
   """
 
-  @behaviour ExRatatui.App
+  use ExRatatui.App
 
   alias ExRatatui.Event.Key
   alias LobbyTui.{Lobby, World}
