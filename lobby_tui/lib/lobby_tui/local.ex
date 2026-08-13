@@ -6,6 +6,7 @@ defmodule LobbyTui.Local do
   """
 
   alias LobbyTui.Lobby
+  alias LobbyTui.Lobby.Join
 
   @doc """
   Joins the lobby as `nickname` and runs the Theatre TUI on the local terminal until the session ends (`q`, window closed, process killed, or a fatal render error), then leaves the lobby so the seat and presence entry are freed immediately rather than waiting out the disconnect grace period.
@@ -17,7 +18,7 @@ defmodule LobbyTui.Local do
   Returns `:ok` when the session ends normally and `{:error, reason}` when the server exits abnormally or the terminal cannot be initialised (for example, no TTY). Exits are trapped for the duration of the call (the flag is restored afterwards), so a server crash lands here instead of killing the caller — and in every case the attendee row is removed before returning, keeping the nickname free for the next attempt.
   """
   def run(nickname, avatar_name \\ nil) do
-    avatar = pick_avatar(avatar_name)
+    avatar = Join.pick_avatar(avatar_name)
     attendee = Lobby.join!(nickname, avatar.id)
     trapping? = Process.flag(:trap_exit, true)
 
@@ -53,11 +54,5 @@ defmodule LobbyTui.Local do
     after
       0 -> :ok
     end
-  end
-
-  defp pick_avatar(nil), do: Enum.random(Lobby.list_avatars!())
-
-  defp pick_avatar(name) do
-    Enum.find(Lobby.list_avatars!(), &(&1.name == name)) || pick_avatar(nil)
   end
 end
