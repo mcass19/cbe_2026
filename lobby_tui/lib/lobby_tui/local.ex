@@ -16,14 +16,17 @@ defmodule LobbyTui.Local do
   Passes `quit?: true` to `Theatre.mount/1` — press `q` to leave. This is a local-terminal-only affordance: the browser embed never sets it, so a stray "q" typed into the room from a browser tab cannot kill that attendee's TUI process.
 
   Returns `:ok` when the session ends normally and `{:error, reason}` when the server exits abnormally or the terminal cannot be initialised (for example, no TTY). Exits are trapped for the duration of the call (the flag is restored afterwards), so a server crash lands here instead of killing the caller — and in every case the attendee row is removed before returning, keeping the nickname free for the next attempt.
+
+  `opts` exists for the tests: `:start_server` replaces `ExRatatui.Server.start_link/1`, so the failure path can be exercised deterministically instead of depending on whether the test run happens to have a TTY — with one, the real start would take over the terminal and block.
   """
-  def run(nickname, avatar_name \\ nil) do
+  def run(nickname, avatar_name \\ nil, opts \\ []) do
+    start_server = Keyword.get(opts, :start_server, &ExRatatui.Server.start_link/1)
     avatar = Join.pick_avatar(avatar_name)
     attendee = Lobby.join!(nickname, avatar.id)
     trapping? = Process.flag(:trap_exit, true)
 
     try do
-      case ExRatatui.Server.start_link(
+      case start_server.(
              mod: LobbyTui.Theatre,
              transport: :local,
              attendee: attendee,
