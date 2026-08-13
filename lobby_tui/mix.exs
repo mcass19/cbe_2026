@@ -65,8 +65,7 @@ defmodule LobbyTui.MixProject do
 
       # tui
       {:phoenix_ex_ratatui, "~> 0.2"},
-      # TODO(release): drop the path override once ex_ratatui ships ssh_user on hex
-      {:ex_ratatui, path: "../../ex_ratatui", override: true},
+      {:ex_ratatui, "~> 0.13"},
 
       # ash
       {:ash_phoenix, "~> 2.0"},
