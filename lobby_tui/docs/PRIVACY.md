@@ -1,4 +1,4 @@
-# Privacy notice — TUIs everywhere lobby
+# Privacy notice
 
 This is the plain-language privacy note for the live demo room used at the Code BEAM Europe 2026 talk "TUIs everywhere." It applies to all three entry points — the browser, a local terminal, and SSH — since they run the same code and store data the same way.
 
@@ -28,12 +28,6 @@ An attendee disappears from the room when their connection drops, after a 30-sec
 
 Chat messages persist only in memory for the lifetime of the server process — a restart wipes the whole feed. There is no backup and no export.
 
-## Deleting data
-
-There is no self-service delete button. During the session, a request to remove a posted message can be made to the operator running the room, who can remove it from the moderation console (see "Moderation" below).
-
-After a session ends there is no path to identify which messages belonged to a given attendee, since the row linking them together no longer exists by then. For anything else — a request to confirm no residual copy exists, a question about a specific message seen during the talk, or similar — reach the controller at the address below.
-
 ## Moderation
 
 An operator can remove any message from the console during the talk (`Lobby.moderate_delete/2`, run by a person, not automated). This exists to handle abuse in the room, not to monitor ordinary conversation.
@@ -44,5 +38,5 @@ The deployed instance runs in the EU (Fly.io, `ams` region).
 
 ## Who is responsible
 
-Controller: Mauricio Cassola.
+Mauricio Cassola.
 mauricass19@gmail.com

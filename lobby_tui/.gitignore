@@ -31,6 +31,11 @@ lobby_tui-*.tar
 # Ignore digested assets cache.
 /priv/static/cache_manifest.json
 
+# The dev SSH host key. `auto_host_key: true` makes the daemon generate one
+# here on first boot, and in dev the build's priv_dir is a symlink back to
+# this tree — so without this line a private key lands in the working tree.
+/priv/ssh/
+
 # In case you use Node.js/npm, you want to ignore these.
 npm-debug.log
 /assets/node_modules/

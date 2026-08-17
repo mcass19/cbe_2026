@@ -1,16 +1,10 @@
 <!-- livebook:{"app_settings":{"show_source":true}} -->
 
-# The lobby, surface four: a notebook
+# The lobby in a notebook
 
 ## Before evaluating anything
 
 This notebook only works on an **attached-node runtime** — the room's state (Ash ETS tables, Presence, PubSub) lives on the running lobby node, so the cells must execute there. There is deliberately no setup cell: attached runtimes cannot `Mix.install`, and everything needed (`kino_ex_ratatui` included) already ships inside the release.
-
-The full attach runbook — WireGuard, cookie, node name — lives in the "Livebook" section of the lobby_tui README. The short version, assuming the one-time setup is done:
-
-1. Bring the WireGuard tunnel up.
-2. Start Livebook with IPv6 distribution enabled (exact command in the README).
-3. Runtime settings (`⚙` on the left, or `r`) → **Attached node** → enter the node name and cookie from the README steps → **Connect**.
 
 When the runtime dot turns green, evaluate the cells below in order.
 
@@ -39,12 +33,3 @@ Kino.ExRatatui.new(LobbyTui.Notebook,
   height: "640px"
 )
 ```
-
-Anyone joining from `https://lobby-tui.fly.dev`, from `ssh <name>@lobby-tui.fly.dev`, or from a local terminal walks across this cell live — and the notebook avatar walks across their screens. Local, browser, SSH, notebook: TUIs everywhere.
-
-## If something looks wrong
-
-* **`UndefinedFunctionError` for `Kino.ExRatatui`** — the runtime is not attached to the lobby node (or the deployed release predates the `kino_ex_ratatui` dependency). Check `Node.self()` above; redeploy if the dep is missing.
-* **Widget renders but the room is empty** — that is a *different*, freshly seeded node (for example a locally started `iex -S mix` instead of the Fly node). Same check: `Node.self()`.
-* **Connect fails from the runtime dialog** — cookie or WireGuard. Re-run the README's "every time" steps; the tunnel being down is the usual culprit.
-* **Keystrokes go nowhere** — click the widget once so xterm.js has browser focus.

@@ -1,6 +1,6 @@
 defmodule LobbyTui.Local do
   @moduledoc """
-  The local-terminal transport: the same `LobbyTui.Theatre` the browser runs, in a real TTY. Used for development and as the talk's "same room, second transport" beat until the SSH endpoint lands in pass two.
+  The local-terminal transport: the same `LobbyTui.Theatre` the browser runs, in a real TTY. The room is the one held by the node this runs on — attendees, seats and messages are Ash ETS tables in that node's memory — so this joins the local lobby, not the deployed one; `LobbyTui.Ssh` is the transport that puts a real terminal in the public room.
 
   Requires a real TTY — `ExRatatui.Server.start_link/1` with `transport: :local` takes over the calling terminal (raw mode, alternate screen) and blocks the caller until the session ends. Run it only from an interactive shell, for example `iex -S mix` followed by `LobbyTui.Local.run("speaker")`. Never run it detached, backgrounded, or from a non-interactive process — without a real TTY the terminal init fails immediately.
   """
