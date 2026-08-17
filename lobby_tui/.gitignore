@@ -37,6 +37,7 @@ npm-debug.log
 
 # Local development notes and specs, never committed.
 /docs/dev/
+mise.toml
 
 # wireguard
 lobby-wg.conf
