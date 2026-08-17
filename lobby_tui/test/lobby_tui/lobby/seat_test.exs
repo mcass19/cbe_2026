@@ -1,29 +1,13 @@
 defmodule LobbyTui.Lobby.SeatTest do
   use ExUnit.Case, async: false
 
+  import LobbyTui.RoomFixtures
+
   alias LobbyTui.Lobby
 
   setup do
     LobbyTui.Lobby.Seeder.seed_seats!()
     :ok
-  end
-
-  defp join!(nick_prefix) do
-    avatar =
-      Lobby.seed_avatar!(%{
-        name: "a_#{System.unique_integer([:positive])}",
-        sprite_cells: [],
-        dominant_color: {:rgb, 0, 0, 0},
-        license: "CC0",
-        attribution: "test"
-      })
-
-    Lobby.join!("#{nick_prefix}_#{System.unique_integer([:positive])}", avatar.id)
-  end
-
-  defp free_seat! do
-    Enum.find(Lobby.list_seats!(), &is_nil(&1.occupant_id)) ||
-      flunk("no free seat available")
   end
 
   test "seeding is idempotent and yields one record per world seat" do
@@ -32,15 +16,15 @@ defmodule LobbyTui.Lobby.SeatTest do
   end
 
   test "an attendee claims a free seat" do
-    attendee = join!("sitter")
+    attendee = join!(prefix: "sitter")
     seat = free_seat!()
     assert {:ok, claimed} = Lobby.claim_seat(seat, actor: attendee)
     assert claimed.occupant_id == attendee.id
   end
 
   test "claiming an occupied seat fails" do
-    a = join!("first")
-    b = join!("second")
+    a = join!(prefix: "first")
+    b = join!(prefix: "second")
     seat = free_seat!()
     {:ok, _} = Lobby.claim_seat(seat, actor: a)
     assert {:error, _} = Lobby.claim_seat(seat, actor: b)
@@ -48,7 +32,7 @@ defmodule LobbyTui.Lobby.SeatTest do
 
   test "the critical concurrency race: exactly one of N claimants wins" do
     seat = free_seat!()
-    attendees = for _ <- 1..8, do: join!("racer")
+    attendees = for _ <- 1..8, do: join!(prefix: "racer")
 
     results =
       attendees
@@ -59,7 +43,7 @@ defmodule LobbyTui.Lobby.SeatTest do
   end
 
   test "re-claiming one's own already-held seat succeeds (idempotent re-sit)" do
-    attendee = join!("resitter")
+    attendee = join!(prefix: "resitter")
     seat = free_seat!()
     {:ok, _} = Lobby.claim_seat(seat, actor: attendee)
     assert {:ok, reclaimed} = Lobby.claim_seat(seat, actor: attendee)
@@ -67,7 +51,7 @@ defmodule LobbyTui.Lobby.SeatTest do
   end
 
   test "claiming a second seat releases the first (moving seats)" do
-    attendee = join!("mover")
+    attendee = join!(prefix: "mover")
     [seat_a, seat_b | _] = Enum.filter(Lobby.list_seats!(), &is_nil(&1.occupant_id))
     {:ok, _} = Lobby.claim_seat(seat_a, actor: attendee)
     {:ok, _} = Lobby.claim_seat(seat_b, actor: attendee)
@@ -76,12 +60,12 @@ defmodule LobbyTui.Lobby.SeatTest do
   end
 
   test "seat_of returns error when the attendee stands" do
-    attendee = join!("stander")
+    attendee = join!(prefix: "stander")
     assert {:error, _} = Lobby.seat_of(attendee.id)
   end
 
   test "leave frees the held seat" do
-    attendee = join!("leaver")
+    attendee = join!(prefix: "leaver")
     seat = free_seat!()
     {:ok, _} = Lobby.claim_seat(seat, actor: attendee)
     {:ok, _} = Lobby.leave(attendee)
@@ -90,7 +74,7 @@ defmodule LobbyTui.Lobby.SeatTest do
   end
 
   test "stand releases the attendee's own seat" do
-    attendee = join!("stander")
+    attendee = join!(prefix: "stander")
     seat = free_seat!()
     {:ok, claimed} = Lobby.claim_seat(seat, actor: attendee)
     assert {:ok, stood} = Lobby.stand(claimed, actor: attendee)
@@ -99,8 +83,8 @@ defmodule LobbyTui.Lobby.SeatTest do
   end
 
   test "stand on someone else's seat errors and leaves it occupied" do
-    owner = join!("owner")
-    other = join!("bystander")
+    owner = join!(prefix: "owner")
+    other = join!(prefix: "bystander")
     seat = free_seat!()
     {:ok, claimed} = Lobby.claim_seat(seat, actor: owner)
 
@@ -110,7 +94,7 @@ defmodule LobbyTui.Lobby.SeatTest do
   end
 
   test "stand without an actor errors" do
-    attendee = join!("noactor")
+    attendee = join!(prefix: "noactor")
     seat = free_seat!()
     {:ok, claimed} = Lobby.claim_seat(seat, actor: attendee)
     assert {:error, _} = Lobby.stand(claimed)

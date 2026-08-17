@@ -2,6 +2,8 @@ defmodule LobbyTui.TheatreTest do
   use ExUnit.Case, async: false
 
   alias ExRatatui.Event.Key
+  import LobbyTui.RoomFixtures
+
   alias LobbyTui.{Lobby, Theatre}
 
   setup do
@@ -10,16 +12,8 @@ defmodule LobbyTui.TheatreTest do
   end
 
   defp mount!(extra \\ []) do
-    avatar =
-      Lobby.seed_avatar!(%{
-        name: "t_#{System.unique_integer([:positive])}",
-        sprite_cells: [],
-        dominant_color: {:rgb, 9, 9, 9},
-        license: "CC0",
-        attribution: "test"
-      })
-
-    attendee = Lobby.join!("thea_#{System.unique_integer([:positive])}", avatar.id)
+    avatar = seed_avatar!(%{dominant_color: {:rgb, 9, 9, 9}})
+    attendee = join!(avatar: avatar, prefix: "thea")
     {:ok, state} = Theatre.mount([attendee: attendee, connect?: false] ++ extra)
     state
   end
@@ -54,16 +48,8 @@ defmodule LobbyTui.TheatreTest do
   ]
 
   test "avatar cache entries carry the leading-transparent-row trim" do
-    avatar =
-      Lobby.seed_avatar!(%{
-        name: "trimmed_#{System.unique_integer([:positive])}",
-        sprite_cells: @top_trim_sprite,
-        dominant_color: {:rgb, 1, 2, 3},
-        license: "CC0",
-        attribution: "test"
-      })
-
-    attendee = Lobby.join!("trim_#{System.unique_integer([:positive])}", avatar.id)
+    avatar = seed_avatar!(%{sprite_cells: @top_trim_sprite})
+    attendee = join!(avatar: avatar, prefix: "trim")
     {:ok, state} = Theatre.mount(attendee: attendee, connect?: false)
 
     assert %{top_trim: 2} = state.avatar_cache[avatar.id]

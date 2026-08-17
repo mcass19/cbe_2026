@@ -1,6 +1,6 @@
 defmodule LobbyTui.Lobby.Seat do
   @moduledoc """
-  One of the 80 theatre seats, seeded at boot from `LobbyTui.World.seats/0`. The layout fields never change; `occupant_id` is the only mutable field and is guarded by the conditional-update claim (the ETS data layer has no transactions, so the claim filters on `occupant_id == nil` instead).
+  One of the 80 theatre seats, seeded at boot from `LobbyTui.World.seats/0`. The layout fields never change; `occupant_id` is the only mutable field, and every write to it is guarded: `:claim` filters on `occupant_id == nil` (or the actor's own, for an idempotent re-sit) and `:stand` filters on `occupant_id == actor`. The ETS data layer has no transactions, so those filters are the guard rather than a lock. There is deliberately no unconditional release action — freeing a seat always states whose seat it is, including when the occupant is leaving the room for good.
   """
 
   use Ash.Resource,
@@ -30,12 +30,6 @@ defmodule LobbyTui.Lobby.Seat do
       change LobbyTui.Lobby.Seat.Changes.ClaimIfFree
     end
 
-    update :release do
-      accept []
-      require_atomic? false
-      change set_attribute(:occupant_id, nil)
-    end
-
     update :stand do
       accept []
       require_atomic? false
@@ -48,7 +42,6 @@ defmodule LobbyTui.Lobby.Seat do
     prefix "lobby"
 
     publish :claim, "seats"
-    publish :release, "seats"
     publish :stand, "seats"
   end
 

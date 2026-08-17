@@ -1,6 +1,6 @@
 defmodule LobbyTui.Lobby.Seat.Changes.ClaimIfFree do
   @moduledoc """
-  The conditional seat claim: filters the update on `occupant_id == nil or occupant_id == actor` so a taken seat matches nothing (the claim errors instead of overwriting) while re-claiming one's own seat is an idempotent no-op — refresh/reconnect calls this the same way as a fresh sit. Then sets the occupant to the actor. An after-action releases any other seat the actor held, so moving seats is a single claim.
+  The conditional seat claim: filters the update on `occupant_id == nil or occupant_id == actor` so a taken seat matches nothing (the claim errors instead of overwriting) while re-claiming one's own seat is an idempotent no-op — refresh/reconnect calls this the same way as a fresh sit. Then sets the occupant to the actor. An after-action stands the actor up from any other seat they held, so moving seats is a single claim.
 
   The ETS data layer checks that filter and writes the row as two separate,
   unlocked ETS operations, so two concurrent claimants can both pass the
@@ -18,12 +18,12 @@ defmodule LobbyTui.Lobby.Seat.Changes.ClaimIfFree do
   import Ash.Expr
 
   @impl true
-  def change(changeset, _opts, %{actor: %{id: attendee_id}}) do
+  def change(changeset, _opts, %{actor: %{id: attendee_id} = actor}) do
     changeset
     |> Ash.Changeset.filter(expr(is_nil(occupant_id) or occupant_id == ^attendee_id))
     |> Ash.Changeset.force_change_attribute(:occupant_id, attendee_id)
     |> Ash.Changeset.after_action(fn _changeset, seat ->
-      release_other_seats(seat, attendee_id)
+      release_other_seats(seat, actor)
       {:ok, seat}
     end)
     |> Ash.Changeset.around_action(fn changeset, callback ->
@@ -35,10 +35,10 @@ defmodule LobbyTui.Lobby.Seat.Changes.ClaimIfFree do
     Ash.Changeset.add_error(changeset, field: :occupant_id, message: "requires an actor")
   end
 
-  defp release_other_seats(%{id: kept_id}, attendee_id) do
+  defp release_other_seats(%{id: kept_id}, %{id: attendee_id} = actor) do
     LobbyTui.Lobby.Seat
     |> Ash.Query.filter(occupant_id == ^attendee_id and id != ^kept_id)
     |> Ash.read!(authorize?: false)
-    |> Enum.each(&LobbyTui.Lobby.release_seat!/1)
+    |> Enum.each(&LobbyTui.Lobby.stand!(&1, actor: actor))
   end
 end

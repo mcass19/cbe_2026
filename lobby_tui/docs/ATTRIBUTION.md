@@ -1,6 +1,6 @@
 # Sprite attribution
 
-Every asset in `priv/sprites_src/` and `priv/scene/` is listed below with its true source and license. Community PRs replacing or adding sprites should append a row. Any addition whose license is not CC0/public-domain-equivalent or is not clearly compatible with this project's license needs a note explaining why it is acceptable.
+Every asset in `priv/sprites_src/` and `priv/scene/` is listed below with its true source and license. The scripts named in the table are the reproduction path, not just a record of one: re-running them means downloading the linked source pack into `tmp/avatar_import/` (gitignored, so it is never vendored here) and pointing the script at it. Community PRs replacing or adding sprites should append a row. Any addition whose license is not CC0/public-domain-equivalent or is not clearly compatible with this project's license needs a note explaining why it is acceptable.
 
 | file | author | source | license |
 | --- | --- | --- | --- |

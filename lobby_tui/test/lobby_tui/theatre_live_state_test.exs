@@ -1,6 +1,8 @@
 defmodule LobbyTui.TheatreLiveStateTest do
   use ExUnit.Case, async: false
 
+  import LobbyTui.RoomFixtures
+
   alias LobbyTui.{Lobby, Theatre}
 
   setup do
@@ -9,16 +11,7 @@ defmodule LobbyTui.TheatreLiveStateTest do
   end
 
   defp mount_connected! do
-    avatar =
-      Lobby.seed_avatar!(%{
-        name: "l_#{System.unique_integer([:positive])}",
-        sprite_cells: [],
-        dominant_color: {:rgb, 1, 1, 1},
-        license: "CC0",
-        attribution: "test"
-      })
-
-    attendee = Lobby.join!("live_#{System.unique_integer([:positive])}", avatar.id)
+    attendee = join!(prefix: "live")
     {:ok, state} = Theatre.mount(attendee: attendee, connect?: true)
     state
   end
@@ -41,7 +34,7 @@ defmodule LobbyTui.TheatreLiveStateTest do
     # color lookup misses and the entry stores the fallback.
     assert state.occupied[{seat.x, seat.y}] == %{id: other.id, color: :red}
 
-    _ = Lobby.release_seat!(claimed)
+    _ = Lobby.stand!(claimed, actor: other)
     assert_receive %Phoenix.Socket.Broadcast{topic: "lobby:seats"} = release_broadcast
     {:noreply, state} = Theatre.handle_info(release_broadcast, state)
     refute Map.has_key?(state.occupied, {seat.x, seat.y})

@@ -1,23 +1,13 @@
 defmodule LobbyTui.Lobby.AttendeeTest do
   use ExUnit.Case, async: false
 
+  import LobbyTui.RoomFixtures
+
   alias LobbyTui.Lobby
-
-  defp unique_nick, do: "nick_#{System.unique_integer([:positive])}"
-
-  defp seed_avatar! do
-    Lobby.seed_avatar!(%{
-      name: "test_#{System.unique_integer([:positive])}",
-      sprite_cells: [[{"▀", {:rgb, 1, 2, 3}, nil}]],
-      dominant_color: {:rgb, 1, 2, 3},
-      license: "CC0",
-      attribution: "test"
-    })
-  end
 
   test "join creates an attendee linked to an avatar" do
     avatar = seed_avatar!()
-    nick = unique_nick()
+    nick = unique_nickname()
     assert {:ok, attendee} = Lobby.join(nick, avatar.id)
     assert attendee.nickname == nick
     assert attendee.avatar_id == avatar.id
@@ -25,7 +15,7 @@ defmodule LobbyTui.Lobby.AttendeeTest do
 
   test "join rejects a duplicate nickname" do
     avatar = seed_avatar!()
-    nick = unique_nick()
+    nick = unique_nickname()
     assert {:ok, _} = Lobby.join(nick, avatar.id)
     assert {:error, %Ash.Error.Invalid{}} = Lobby.join(nick, avatar.id)
   end
@@ -38,7 +28,7 @@ defmodule LobbyTui.Lobby.AttendeeTest do
 
   test "leave removes the attendee" do
     avatar = seed_avatar!()
-    {:ok, attendee} = Lobby.join(unique_nick(), avatar.id)
+    {:ok, attendee} = Lobby.join(unique_nickname(), avatar.id)
     assert {:ok, _} = Lobby.leave(attendee)
     assert {:error, _} = Lobby.get_attendee(attendee.id)
   end

@@ -1,32 +1,13 @@
 defmodule LobbyTui.Lobby.MessageTest do
   use ExUnit.Case, async: false
 
+  import LobbyTui.RoomFixtures
+
   alias LobbyTui.Lobby
 
   setup do
     LobbyTui.Lobby.Seeder.seed_seats!()
     :ok
-  end
-
-  defp join!, do: join!("msg")
-
-  defp join!(prefix) do
-    avatar =
-      Lobby.seed_avatar!(%{
-        name: "a_#{System.unique_integer([:positive])}",
-        sprite_cells: [],
-        dominant_color: {:rgb, 0, 0, 0},
-        license: "CC0",
-        attribution: "test"
-      })
-
-    Lobby.join!("#{prefix}_#{System.unique_integer([:positive])}", avatar.id)
-  end
-
-  defp seat!(attendee) do
-    seat = Enum.find(Lobby.list_seats!(), &is_nil(&1.occupant_id))
-    {:ok, _} = Lobby.claim_seat(seat, actor: attendee)
-    attendee
   end
 
   test "a seated attendee posts; the message captures author fields" do

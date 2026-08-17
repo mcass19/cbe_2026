@@ -1,20 +1,9 @@
 defmodule LobbyTui.ReaperTest do
   use ExUnit.Case, async: false
 
+  import LobbyTui.RoomFixtures
+
   alias LobbyTui.Lobby
-
-  defp join! do
-    avatar =
-      Lobby.seed_avatar!(%{
-        name: "r_#{System.unique_integer([:positive])}",
-        sprite_cells: [],
-        dominant_color: {:rgb, 0, 0, 0},
-        license: "CC0",
-        attribution: "test"
-      })
-
-    Lobby.join!("reap_#{System.unique_integer([:positive])}", avatar.id)
-  end
 
   test "an attendee is removed grace_ms after their presence leaves" do
     attendee = join!()

@@ -22,7 +22,6 @@ defmodule LobbyTui.Lobby do
       define :seed_seat, action: :seed
       define :list_seats, action: :read
       define :claim_seat, action: :claim
-      define :release_seat, action: :release
       define :stand, action: :stand
       define :seat_of, action: :by_occupant, args: [:attendee_id]
     end
