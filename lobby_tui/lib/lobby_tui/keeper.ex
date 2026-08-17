@@ -33,16 +33,21 @@ defmodule LobbyTui.Keeper do
 
   @impl true
   def handle_call({:run, fun}, _from, state) do
-    # A raise inside a serialized action must not kill this singleton — every
-    # other in-flight and future write funnels through it. Callers already
-    # handle `{:error, _}`, so a rescued exception degrades to an ordinary
-    # error reply instead of taking the process (and the whole serialization
-    # point) down.
+    # A failing action must not kill this singleton — every other in-flight
+    # and future write funnels through it. Callers already handle
+    # `{:error, _}`, so a failure degrades to an ordinary error reply
+    # instead of taking the process (and the whole serialization point)
+    # down. `exit` is caught alongside exceptions because Ash's ETS data
+    # layer talks to its table manager with `GenServer.call/3`: a timeout
+    # there exits rather than raises, and would otherwise cascade from one
+    # slow write into every concurrent join and seat claim.
     result =
       try do
         fun.()
       rescue
         exception -> {:error, exception}
+      catch
+        :exit, reason -> {:error, {:exit, reason}}
       end
 
     {:reply, result, state}

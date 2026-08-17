@@ -93,6 +93,30 @@ defmodule LobbyTui.ReaperTest do
     LobbyTui.Presence.untrack(self(), LobbyTui.Presence.topic(), attendee.id)
   end
 
+  test "a second leave with no join between re-arms the grace period from the later one" do
+    attendee = join!()
+    reaper = start_supervised!({LobbyTui.Reaper, grace_ms: 300, name: :test_reaper_e})
+
+    leave = %Phoenix.Socket.Broadcast{
+      topic: "lobby:presence",
+      event: "presence_diff",
+      payload: %{joins: %{}, leaves: %{attendee.id => %{metas: []}}}
+    }
+
+    # One attendee, two tabs, closed a while apart. Scheduling over the top
+    # of the first timer without cancelling it left that timer armed: it
+    # fired at the first leave's deadline and reaped 200 ms early.
+    send(reaper, leave)
+    Process.sleep(200)
+    send(reaper, leave)
+    _ = :sys.get_state(reaper)
+
+    Process.sleep(150)
+    assert {:ok, _still_here} = Lobby.get_attendee(attendee.id)
+
+    :ok = await_gone(attendee.id, 400)
+  end
+
   test "a stale reap message for an untracked id is ignored" do
     attendee = join!()
     reaper = start_supervised!({LobbyTui.Reaper, grace_ms: 10, name: :test_reaper_d})

@@ -1,12 +1,12 @@
 # Privacy notice
 
-This is the plain-language privacy note for the live demo room used at the Code BEAM Europe 2026 talk "TUIs everywhere." It applies to all three entry points — the browser, a local terminal, and SSH — since they run the same code and store data the same way.
+This is the plain-language privacy note for the live demo room used at the Code BEAM Europe 2026 talk "TUIs everywhere." It applies to all four entry points — the browser, a local terminal, SSH, and a Livebook cell — since they run the same code and store data the same way.
 
 ## What is stored
 
-The nickname typed at the join screen. Over SSH there is no join screen: the nickname is the username offered by the SSH client (`ssh alice@…` joins as "alice"), which is stored exactly like any other nickname.
+The nickname typed at the join screen. Over SSH there is no join screen: the nickname is the username offered by the SSH client (`ssh alice@…` joins as "alice"). In a Livebook cell it is the `nickname:` option passed to the widget. Both are stored exactly like any other nickname.
 
-The avatar picked at the join screen, or a random one over SSH.
+The avatar picked at the join screen; over SSH a random one, and in a Livebook cell the one named in the `avatar:` option, or a random one if none is given.
 
 Chat messages posted while seated.
 
@@ -14,7 +14,7 @@ That is the entire list. Everything above lives in memory only (an in-process ET
 
 ## What is not stored
 
-No accounts and no passwords — joining is just picking a nickname and an avatar, and the SSH endpoint asks for no credentials either. No SSH public keys are recorded.
+No accounts and no passwords — joining is just picking a nickname and an avatar, and the SSH endpoint asks for no credentials either. No SSH public keys are recorded. The Livebook entry point is not public at all: it needs a runtime already attached to the server's node, so only an operator can open one.
 
 No email addresses or any other contact detail.
 
@@ -24,7 +24,7 @@ No persistent identifiers that survive a disconnect — the attendee row (and th
 
 ## How long data lives
 
-An attendee disappears from the room when their connection drops, after a 30-second grace period (long enough to survive a phone lock or a page refresh without kicking someone out mid-sentence). An SSH disconnect is unambiguous — there is no tab to refresh — so those attendees are removed immediately, with no grace period.
+An attendee disappears from the room when their connection drops, after a 30-second grace period (long enough to survive a phone lock or a page refresh without kicking someone out mid-sentence), measured from the most recent disconnect. An SSH disconnect and a stopped Livebook cell are unambiguous — there is no tab to refresh — so those attendees are removed immediately, with no grace period.
 
 Chat messages persist only in memory for the lifetime of the server process — a restart wipes the whole feed. There is no backup and no export.
 

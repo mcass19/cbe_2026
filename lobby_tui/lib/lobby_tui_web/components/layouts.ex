@@ -109,7 +109,7 @@ defmodule LobbyTuiWeb.Layouts do
       id="data-notice"
       class="shrink-0 mt-auto pt-1 text-center text-[11px] leading-tight text-[var(--tui-dim)] border-t border-[var(--tui-border)]"
     >
-      Everything here lives in memory (ETS via Ash). You disappear when you disconnect.
+      Everything here lives in memory (ETS via Ash). Attendees disappear on disconnect.
       Messages are wiped when the server restarts. Please don't post personal information.
       <a href={@privacy_url} target="_blank" class="underline text-[var(--tui-accent-2)]">
         Privacy note.

@@ -68,7 +68,7 @@ The room state (who is where, who said what) is modeled as Ash resources — `Av
 
 The room's own join screen and in-room footer carry this exact notice, verbatim, since it is the truth attendees see live:
 
-> Everything here lives in memory (ETS via Ash). You disappear when you disconnect. Messages are wiped when the server restarts. Please don't post personal information.
+> Everything here lives in memory (ETS via Ash). Attendees disappear on disconnect. Messages are wiped when the server restarts. Please don't post personal information.
 
 The full privacy note, including what data is kept, for how long, and who to contact, is in [`docs/PRIVACY.md`](docs/PRIVACY.md).
 

@@ -9,7 +9,6 @@ defmodule LobbyTui.Application do
   def start(_type, _args) do
     children = [
       LobbyTuiWeb.Telemetry,
-      {DNSCluster, query: Application.get_env(:lobby_tui, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: LobbyTui.PubSub},
       LobbyTui.Presence,
       LobbyTui.Reaper,

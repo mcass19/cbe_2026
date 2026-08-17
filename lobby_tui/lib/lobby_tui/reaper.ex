@@ -52,8 +52,15 @@ defmodule LobbyTui.Reaper do
 
   def handle_info(_msg, state), do: {:noreply, state}
 
+  # An id can leave twice with no join between — one attendee, two tabs,
+  # closed a while apart. Scheduling over the top of a live timer would
+  # leave the first one armed but unreachable: it fires at the *first*
+  # leave's deadline, finds the second timer's entry in the map, and reaps
+  # early. Cancel before re-arming so the grace period is always measured
+  # from the most recent disconnect.
   defp schedule_reaps(state, ids) do
     Enum.reduce(ids, state, fn id, acc ->
+      acc = cancel_reaps(acc, [id])
       timer = Process.send_after(self(), {:reap, id}, acc.grace)
       %{acc | timers: Map.put(acc.timers, id, timer)}
     end)

@@ -9,28 +9,20 @@ defmodule LobbyTui.Presence do
 
   def topic, do: @topic
 
-  def track_attendee(state) do
+  def track_attendee(state), do: track(self(), @topic, state.attendee.id, meta(state))
+
+  def move(state), do: update(self(), @topic, state.attendee.id, meta(state))
+
+  defp meta(state) do
     {x, y} = state.pos
 
-    track(self(), @topic, state.attendee.id, %{
+    %{
       nickname: state.attendee.nickname,
       color: state.color,
       avatar_id: state.attendee.avatar_id,
       x: x,
       y: y
-    })
-  end
-
-  def move(state) do
-    {x, y} = state.pos
-
-    update(self(), @topic, state.attendee.id, %{
-      nickname: state.attendee.nickname,
-      color: state.color,
-      avatar_id: state.attendee.avatar_id,
-      x: x,
-      y: y
-    })
+    }
   end
 
   def others(attendee_id) do

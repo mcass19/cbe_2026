@@ -1,6 +1,6 @@
 defmodule LobbyTui.Lobby.Seat do
   @moduledoc """
-  One of the 120 theatre seats, seeded at boot from `LobbyTui.World.seats/0`. The layout fields never change; `occupant_id` is the only mutable field and is guarded by the conditional-update claim (the ETS data layer has no transactions, so the claim filters on `occupant_id == nil` instead).
+  One of the 80 theatre seats, seeded at boot from `LobbyTui.World.seats/0`. The layout fields never change; `occupant_id` is the only mutable field and is guarded by the conditional-update claim (the ETS data layer has no transactions, so the claim filters on `occupant_id == nil` instead).
   """
 
   use Ash.Resource,
