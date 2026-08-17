@@ -35,14 +35,20 @@ defmodule LobbyTui.Lobby.Join do
   end
 
   @doc """
-  Joins the room as `base`, suffixing until the nickname is free: "alice", "alice-2", "alice-3" — the suffix eating into the #{@max_nickname}-character budget so the result always fits. Raises any join error that is not a nickname collision.
+  Joins the room as `base`, suffixing until the nickname is free: "alice", "alice-2", "alice-3" — the suffix eating into the #{@max_nickname}-character budget so the result always fits.
+
+  Returns `{:ok, attendee}`, or `{:error, :nickname_unavailable}` once #{@suffix_attempts} suffixes have all been taken. Both transports pass that error straight out of `mount/1`, which `ExRatatui` treats as an aborted session — the connection closes instead of dying on an unmatched clause. Any join error that is not a nickname collision still raises, since it means something worse than a busy name.
   """
   def join_with_suffix(base, avatar_id, attempt \\ 1)
 
-  def join_with_suffix(base, avatar_id, attempt) when attempt <= @suffix_attempts do
+  def join_with_suffix(_base, _avatar_id, attempt) when attempt > @suffix_attempts do
+    {:error, :nickname_unavailable}
+  end
+
+  def join_with_suffix(base, avatar_id, attempt) do
     case Lobby.join(candidate(base, attempt), avatar_id) do
       {:ok, attendee} ->
-        attendee
+        {:ok, attendee}
 
       {:error, error} ->
         if nickname_taken?(error) do

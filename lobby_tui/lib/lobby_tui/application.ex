@@ -13,7 +13,7 @@ defmodule LobbyTui.Application do
       {Phoenix.PubSub, name: LobbyTui.PubSub},
       LobbyTui.Presence,
       LobbyTui.Reaper,
-      LobbyTui.SeatKeeper,
+      LobbyTui.Keeper,
       LobbyTui.RateLimiter,
       LobbyTui.SpriteLoader,
       LobbyTui.Scene,

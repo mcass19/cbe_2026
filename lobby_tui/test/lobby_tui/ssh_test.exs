@@ -76,6 +76,23 @@ defmodule LobbyTui.SshTest do
       assert state.attendee.nickname =~ ~r/^guest/
     end
 
+    test "aborts the session cleanly when every suffix for a name is taken" do
+      name = uniq()
+
+      attendees =
+        for _ <- 1..50 do
+          {:ok, state} = Ssh.mount(ssh_user: name, connect?: false)
+          state.attendee
+        end
+
+      on_exit(fn -> Enum.each(attendees, &Lobby.leave/1) end)
+
+      # `ExRatatui` treats an `{:error, _}` from mount/1 as an aborted
+      # session, so the connection closes instead of the shim dying on an
+      # unmatched `join_with_suffix/3` clause.
+      assert Ssh.mount(ssh_user: name, connect?: false) == {:error, :nickname_unavailable}
+    end
+
     test "allows quitting with q, like the local transport" do
       state = mount!(uniq())
 

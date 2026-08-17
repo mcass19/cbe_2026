@@ -22,16 +22,21 @@ defmodule LobbyTui.Notebook do
   def mount(opts) do
     avatar = Join.pick_avatar(Keyword.get(opts, :avatar))
 
-    attendee =
+    nickname =
       opts
       |> Keyword.get(:nickname, @default_nickname)
       |> Join.sanitize_nickname()
-      |> Join.join_with_suffix(avatar.id)
 
-    opts
-    |> Keyword.take([:connect?, :quit?])
-    |> Keyword.merge(attendee: attendee)
-    |> Theatre.mount()
+    case Join.join_with_suffix(nickname, avatar.id) do
+      {:ok, attendee} ->
+        opts
+        |> Keyword.take([:connect?, :quit?])
+        |> Keyword.merge(attendee: attendee)
+        |> Theatre.mount()
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   @impl true

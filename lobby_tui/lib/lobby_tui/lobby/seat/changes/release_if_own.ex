@@ -4,9 +4,9 @@ defmodule LobbyTui.Lobby.Seat.Changes.ReleaseIfOwn do
   standing from a seat someone else holds matches nothing (the stand errors
   instead of stealing it), then clears the occupant.
 
-  Unlike `ClaimIfFree`, this needs no `LobbyTui.SeatKeeper` serialization.
+  Unlike `ClaimIfFree`, this needs no `LobbyTui.Keeper` serialization.
   Two concurrent claimants racing to fill the same nil slot is the only
-  interleaving `SeatKeeper` closes; a stand can never race a claim into
+  interleaving `Keeper` closes; a stand can never race a claim into
   double-occupancy because the two filters are mutually exclusive on the
   same row — a claim's filter requires `occupant_id` to be `nil` (or
   already the actor's own), and a stand's filter requires `occupant_id` to

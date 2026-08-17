@@ -92,4 +92,29 @@ defmodule LobbyTui.Lobby.MessageTest do
     assert {:error, %Ash.Error.Invalid{}} =
              Lobby.post_message("no author", actor: %LobbyTui.Admin{})
   end
+
+  test "moderation is forbidden to everyone but the admin actor" do
+    author = seat!(join!())
+    bystander = seat!(join!())
+    {:ok, msg} = Lobby.post_message("not yours to moderate", actor: author)
+
+    # The bypass is what grants moderation; without a test on this side, a
+    # broken bypass condition would hand every attendee the moderate action.
+    assert {:error, %Ash.Error.Forbidden{}} = Lobby.moderate_delete(msg, actor: bystander)
+    assert {:error, %Ash.Error.Forbidden{}} = Lobby.moderate_delete(msg, actor: author)
+    assert {:error, _} = Lobby.moderate_delete(msg, actor: nil)
+  end
+
+  test "an actor-less caller can neither post nor read the feed" do
+    seated = seat!(join!())
+    {:ok, _} = Lobby.post_message("visible to the seated", actor: seated)
+
+    # The endpoint is unauthenticated, so an actor-less call is the default
+    # path for anything reaching the domain without an attendee. Posting is
+    # refused by `CaptureAuthor` before the authorizer runs; reading has no
+    # such change, so it falls through to `HoldsSeat`'s
+    # `match?(_actor, _, _), do: false` clause.
+    assert {:error, %Ash.Error.Invalid{}} = Lobby.post_message("anon", actor: nil)
+    assert {:error, %Ash.Error.Forbidden{}} = Lobby.stage_feed(actor: nil)
+  end
 end

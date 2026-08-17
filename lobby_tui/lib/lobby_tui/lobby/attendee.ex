@@ -13,6 +13,7 @@ defmodule LobbyTui.Lobby.Attendee do
 
     create :join do
       accept [:nickname, :avatar_id]
+      change LobbyTui.Lobby.Attendee.Changes.SerializeJoin
     end
 
     destroy :leave do

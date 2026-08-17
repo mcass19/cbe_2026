@@ -71,16 +71,21 @@ defmodule LobbyTui.Ssh do
 
   @impl true
   def mount(opts) do
-    attendee =
+    nickname =
       opts
       |> Keyword.get(:ssh_user)
       |> Join.sanitize_nickname()
-      |> Join.join_with_suffix(Join.pick_avatar(nil).id)
 
-    opts
-    |> Keyword.take([:connect?])
-    |> Keyword.merge(attendee: attendee, quit?: true)
-    |> Theatre.mount()
+    case Join.join_with_suffix(nickname, Join.pick_avatar(nil).id) do
+      {:ok, attendee} ->
+        opts
+        |> Keyword.take([:connect?])
+        |> Keyword.merge(attendee: attendee, quit?: true)
+        |> Theatre.mount()
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   @impl true

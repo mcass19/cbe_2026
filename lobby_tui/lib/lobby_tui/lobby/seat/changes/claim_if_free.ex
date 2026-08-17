@@ -6,7 +6,7 @@ defmodule LobbyTui.Lobby.Seat.Changes.ClaimIfFree do
   unlocked ETS operations, so two concurrent claimants can both pass the
   check before either writes. To close that window, the data-layer execution
   is wrapped in `Ash.Changeset.around_action/2` and funneled through
-  `LobbyTui.SeatKeeper`, a single process that serializes claim execution so
+  `LobbyTui.Keeper`, a single process that serializes claim execution so
   the check-plus-write is effectively atomic. The changeset filter remains
   the actual correctness condition; the serialization only removes the
   interleaving that let it race.
@@ -27,7 +27,7 @@ defmodule LobbyTui.Lobby.Seat.Changes.ClaimIfFree do
       {:ok, seat}
     end)
     |> Ash.Changeset.around_action(fn changeset, callback ->
-      LobbyTui.SeatKeeper.serialize(fn -> callback.(changeset) end)
+      LobbyTui.Keeper.serialize(fn -> callback.(changeset) end)
     end)
   end
 
