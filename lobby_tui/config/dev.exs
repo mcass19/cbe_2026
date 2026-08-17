@@ -49,12 +49,11 @@ config :lobby_tui, LobbyTuiWeb.Endpoint,
     web_console_logger: true,
     patterns: [
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
-      ~r"priv/gettext/.*(po)$",
       ~r"lib/lobby_tui_web/(?:controllers|live|components|router)/?.*\.(ex|heex)$"
     ]
   ]
 
-# Enable dev routes for dashboard and mailbox
+# Enable the dev-only LiveDashboard route
 config :lobby_tui, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
@@ -74,9 +73,6 @@ config :phoenix_live_view,
   debug_attributes: true,
   # Enable helpful, but potentially expensive runtime checks
   enable_expensive_runtime_checks: true
-
-# Disable swoosh api client as it is only required for production adapters.
-config :swoosh, :api_client, false
 
 # The SSH entry point is opt-in in development: start the server with
 # LOBBY_SSH=1 to bring the daemon up on port 2222 (see config/runtime.exs).

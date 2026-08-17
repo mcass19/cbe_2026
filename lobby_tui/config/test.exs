@@ -8,12 +8,6 @@ config :lobby_tui, LobbyTuiWeb.Endpoint,
   secret_key_base: "YWAIfsnj6kdlvNhjtDb44u0BGfvKJ0e4CXQLQNZedcI2PCnBVY23XMv5X2Prm1gn",
   server: false
 
-# In test we don't send emails
-config :lobby_tui, LobbyTui.Mailer, adapter: Swoosh.Adapters.Test
-
-# Disable swoosh api client as it is only required for production adapters
-config :swoosh, :api_client, false
-
 # Print only warnings and errors during test
 config :logger, level: :warning
 

@@ -10,10 +10,6 @@ defmodule LobbyTuiWeb.Router do
     plug :put_secure_browser_headers
   end
 
-  pipeline :api do
-    plug :accepts, ["json"]
-  end
-
   scope "/", LobbyTuiWeb do
     pipe_through :browser
 
@@ -23,12 +19,7 @@ defmodule LobbyTuiWeb.Router do
     live "/lobby", LobbyLive
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", LobbyTuiWeb do
-  #   pipe_through :api
-  # end
-
-  # Enable LiveDashboard and Swoosh mailbox preview in development
+  # Enable LiveDashboard in development
   if Application.compile_env(:lobby_tui, :dev_routes) do
     # If you want to use the LiveDashboard in production, you should put
     # it behind authentication and allow only admins to access it.
@@ -41,7 +32,6 @@ defmodule LobbyTuiWeb.Router do
       pipe_through :browser
 
       live_dashboard "/dashboard", metrics: LobbyTuiWeb.Telemetry
-      forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end
 end

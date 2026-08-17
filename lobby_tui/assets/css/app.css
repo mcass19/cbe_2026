@@ -96,9 +96,6 @@
 @custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
 @custom-variant phx-change-loading (.phx-change-loading&, .phx-change-loading &);
 
-/* Use the data attribute for dark mode  */
-@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
-
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
@@ -109,10 +106,8 @@
    one terminal: purple-black background, light-gray body text, dim gray
    secondary text, mid-gray borders. These variables are set at `:root`
    unconditionally — a terminal has one look, so this is deliberately not
-   scoped under `[data-theme=...]`. The generated light/dark theme toggle
-   (`LobbyTuiWeb.Layouts.theme_toggle/1`, wired up in root.html.heex) is
-   left in place for any future non-terminal page; it is simply not
-   consulted here.
+   scoped under `[data-theme=...]`, and the generated light/dark theme
+   toggle has been removed along with the `data-theme` script it needed.
 
    The two accents track Code BEAM Europe's own magenta/cyan pair, sampled
    from the conference site rather than an official brand file, so they are
