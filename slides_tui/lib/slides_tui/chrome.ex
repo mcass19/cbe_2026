@@ -4,9 +4,10 @@ defmodule SlidesTui.Chrome do
 
   Every slide is rendered inside a rounded magenta `Block` that fills
   the full body area; the slide's `title/0` (if any) shows as the
-  block's title. A 1-row footer at the bottom carries a progress chip
-  on the left, one chip per key hint in the middle, and a subtle
-  italic attribution on the right.
+  block's title. A 1-row footer at the bottom carries a magenta progress
+  chip on the left, one muted chip per key hint in the middle, and a subtle
+  italic attribution on the right (muted "built with", library name in
+  violet).
 
   All functions here are pure (no side effects, no global state).
   The host calls `layout/1` once per frame, then uses `body_block/1`
@@ -16,14 +17,26 @@ defmodule SlidesTui.Chrome do
   alias ExRatatui.Layout
   alias ExRatatui.Layout.Rect
   alias ExRatatui.Style
+  alias ExRatatui.Text.{Line, Span}
   alias ExRatatui.Widgets.{Block, Paragraph}
 
   # Code BEAM Europe magenta — the same accent lobby_tui uses (#e11fc1),
   # so every TUI in the talk shares one identity color. RGB rather than
   # named `:magenta`, which reads differently across terminal themes.
   @accent {:rgb, 225, 31, 193}
+  # Second hue from the same family (#a78bfa): a lighter violet for the
+  # library name so it reads as Elixir-flavoured yet distinct from the
+  # magenta chrome around it. Light enough to survive italics on a dark
+  # ground; Elixir's official #4e2a8e would sink into it.
+  @violet {:rgb, 167, 139, 250}
+  # Key hints are for the presenter, not the room. A slate a notch
+  # lighter than the terminal ground keeps them legible without adding
+  # four more magenta blocks to the footer; the progress chip alone
+  # keeps the accent so the magenta stays on the border and one chip.
+  @hint_bg {:rgb, 58, 62, 78}
   @hints ["←/h prev", "→/l next", "n notes", "q quit"]
-  @attribution "built with ex_ratatui"
+  @attribution_prefix "built with "
+  @attribution_name "ex_ratatui"
 
   @doc """
   Splits `area` into `body`, `inner`, and `footer` rects.
@@ -68,8 +81,9 @@ defmodule SlidesTui.Chrome do
   defp block_title(title), do: " #{title} "
 
   @doc """
-  Footer widgets — a progress chip on the left, one chip per key hint
-  in the middle, and an italic gray attribution on the right.
+  Footer widgets — a magenta progress chip on the left, one muted slate
+  chip per key hint in the middle, and an italic attribution on the right ("built with"
+  in gray, the library name in violet).
 
   Returns a list of `{widget, rect}` tuples so the host can splat them
   into its render output. Each segment owns a dedicated horizontal
@@ -82,9 +96,9 @@ defmodule SlidesTui.Chrome do
       when is_integer(current_index) and is_integer(total) and
              current_index >= 0 and total > 0 do
     segments =
-      [{:chip, " #{current_index + 1} / #{total} "}, :flex] ++
-        Enum.intersperse(Enum.map(@hints, &{:chip, " #{&1} "}), {:gap, 1}) ++
-        [{:gap, 2}, {:attr, " #{@attribution} "}]
+      [{:gap, 1}, {:chip, " #{current_index + 1} / #{total} "}, :flex] ++
+        Enum.intersperse(Enum.map(@hints, &{:hint, " #{&1} "}), {:gap, 1}) ++
+        [{:gap, 2}, {:attr, " #{@attribution_prefix}#{@attribution_name} "}]
 
     constraints =
       Enum.map(segments, fn
@@ -106,9 +120,24 @@ defmodule SlidesTui.Chrome do
   defp build_segment({{:chip, text}, rect}),
     do: [{%Paragraph{text: text, style: chip_style()}, rect}]
 
-  defp build_segment({{:attr, text}, rect}),
-    do: [{%Paragraph{text: text, style: attribution_style(), alignment: :right}, rect}]
+  defp build_segment({{:hint, text}, rect}),
+    do: [{%Paragraph{text: text, style: hint_style()}, rect}]
+
+  # The attribution is one Line of two spans: a muted "built with " and
+  # the library name in violet. The segment text is only used to size
+  # the rect above; the spans carry the padding so the widths agree.
+  defp build_segment({{:attr, _text}, rect}) do
+    line =
+      Line.new([
+        Span.new(" #{@attribution_prefix}", style: attribution_style()),
+        Span.new("#{@attribution_name} ", style: attribution_name_style())
+      ])
+
+    [{%Paragraph{text: line, alignment: :right}, rect}]
+  end
 
   defp chip_style, do: %Style{fg: :black, bg: @accent, modifiers: [:bold]}
+  defp hint_style, do: %Style{fg: :gray, bg: @hint_bg, modifiers: [:bold]}
   defp attribution_style, do: %Style{fg: :dark_gray, modifiers: [:italic]}
+  defp attribution_name_style, do: %Style{fg: @violet, modifiers: [:italic]}
 end

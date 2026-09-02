@@ -40,7 +40,7 @@ defmodule SlidesTui.MixProject do
 
   defp deps do
     [
-      {:ex_ratatui, "~> 0.13"}
+      {:ex_ratatui, "~> 0.14"}
     ]
   end
 end

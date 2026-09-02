@@ -33,7 +33,7 @@ defmodule SlidesTui.HostTest do
     test "default pattern finds the talk deck under lib/slides/" do
       {:ok, state, _runtime_opts} = Host.init([])
       assert TuisEverywhere.Slides.Title in state.slides
-      assert length(state.slides) == 14
+      assert length(state.slides) == length(Path.wildcard("lib/slides/[0-9]*.ex"))
     end
 
     test "asks the runtime to probe for the best image protocol" do
@@ -314,7 +314,7 @@ defmodule SlidesTui.HostTest do
       assert body_rect == %Rect{x: 0, y: 0, width: 80, height: 23}
       assert inner_rect == %Rect{x: 1, y: 1, width: 78, height: 21}
       assert progress_text == " 1 / 3 "
-      assert attr_text == " built with ex_ratatui "
+      assert Enum.map_join(attr_text.spans, & &1.content) == " built with ex_ratatui "
     end
 
     test "titled slide — title sits in the block header, not a separate row" do

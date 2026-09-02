@@ -1,8 +1,15 @@
 # Code BEAM Europe 2026 - TUIs everywhere
 
-- TUIs in Goatmire's name badge: [#1](https://github.com/mcass19/name_badge/pull/1) & [#2](https://github.com/mcass19/name_badge/pull/2)
+- TUIs in Goatmire's name badge: [name_badge#3](https://github.com/mcass19/name_badge/pull/3), on [raster_ex_ratatui](https://github.com/mcass19/raster_ex_ratatui)
 - Slides in `slides_tui`
 - Lobby in `lobby_tui`
+
+## Ecosystem shown in the talk
+
+- [ex_ratatui](https://github.com/mcass19/ex_ratatui) — the library
+- [kino_ex_ratatui](https://github.com/mcass19/kino_ex_ratatui) — TUIs in Livebook cells
+- [phoenix_ex_ratatui](https://github.com/mcass19/phoenix_ex_ratatui) — TUIs in LiveView pages
+- [raster_ex_ratatui](https://github.com/mcass19/raster_ex_ratatui) — TUIs on pixel displays (the badge, a Raspberry Pi framebuffer)
 
 ## Talk link
 

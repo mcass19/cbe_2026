@@ -7,27 +7,23 @@ defmodule TuisEverywhere.Slides.AboutMe do
   alias ExRatatui.Text.{Line, Span}
   alias ExRatatui.Widgets.Paragraph
   alias SlidesTui.Layout, as: SlidesLayout
+  alias TuisEverywhere.Slides.Ui
 
   @photo_width 28
   @photo_height 14
   @gap 3
   @text_width 40
 
-  @prompt_style %Style{fg: :green, modifiers: [:bold]}
   @name_style %Style{modifiers: [:bold]}
 
   def title, do: "About me"
 
   def notes do
     """
-    ## whoami
-
-    - Mauricio "Mauri" Cassola — software engineer from Uruguay
-    - day job: Elixir + a lot of OTP plumbing
-    - author of ex_ratatui — the rest of this deck is what fell out of that
-    - keep it short, the toys are the talk
-
-    Site: mcass19.dev
+    - mauricio "mauri" cassola, software engineer from uruguay
+    - netherlands, almost 4 years
+    - the picture i use everywhere, mcass19 handle for all the links
+    - elixir for many years, from different angles, day to day now
     """
   end
 
@@ -61,15 +57,22 @@ defmodule TuisEverywhere.Slides.AboutMe do
     ]
   end
 
+  # Shell prompts share the title's violet rather than a terminal green,
+  # so the deck's second hue carries through instead of a third colour.
+  defp prompt_style, do: %{Ui.violet_style() | modifiers: [:bold]}
+
   defp lines do
+    prompt = prompt_style()
+
     [
-      Line.new([Span.new("$ whoami", style: @prompt_style)]),
+      Line.new([Span.new("$ whoami", style: prompt)]),
       Line.new([]),
-      Line.new([Span.new("Mauri", style: @name_style)]),
-      Line.new([Span.new("Software Engineer from Uruguay")]),
+      Line.new([Span.new("Mauricio Cassola", style: @name_style)]),
+      Line.new([Span.new("Software Engineer")]),
       Line.new([]),
-      Line.new([Span.new("$ cat links.txt", style: @prompt_style)]),
+      Line.new([Span.new("$ cat links.txt", style: prompt)]),
       Line.new([]),
+      Line.new([Span.new("mcass19.dev")]),
       Line.new([Span.new("mauricass19@gmail.com")]),
       Line.new([Span.new("github.com/mcass19")]),
       Line.new([Span.new("linkedin.com/in/mauricio-cassola")])

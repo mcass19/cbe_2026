@@ -37,7 +37,8 @@ defmodule SlidesTui.DeckTest do
       modules = Deck.discover()
       assert List.first(modules) == TuisEverywhere.Slides.Title
       assert List.last(modules) == TuisEverywhere.Slides.Thanks
-      assert length(modules) == 14
+      # every numbered file is a slide; ui.ex is the only helper
+      assert length(modules) == length(Path.wildcard("lib/slides/[0-9]*.ex"))
     end
 
     test "the Ui helper next to the slides is not discovered as a slide" do

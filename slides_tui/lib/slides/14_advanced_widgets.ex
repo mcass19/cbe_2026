@@ -2,7 +2,7 @@ defmodule TuisEverywhere.Slides.AdvancedWidgets do
   @moduledoc false
   use SlidesTui.Slide
 
-  alias ExRatatui.{Layout, Style, Subscription}
+  alias ExRatatui.{Layout, Subscription}
   alias ExRatatui.ThreeD.{Camera, Light, Material, Mesh, Object, Scene, Transform}
   alias ExRatatui.Widgets.{Block, Paragraph, Viewport3D}
   alias SlidesTui.Layout, as: SlidesLayout
@@ -13,27 +13,24 @@ defmodule TuisEverywhere.Slides.AdvancedWidgets do
     "3D — lit scenes rasterized into cells (live, over there)",
     "copy & paste — bracketed paste, one event per paste",
     "markdown & code — syntect-highlighted, straight from strings",
-    "custom — cells are data; compose and ship new widgets"
+    "focus ring + mouse hit-testing, an eleven-slot theme palette",
+    "custom widgets — compose existing ones in pure Elixir, no Rust"
   ]
 
   def title, do: "Advanced widgets"
 
   def notes do
     """
-    ## Advanced widgets
-
-    - the cube is rendering live right now: a Subscription.interval
-      nudges the angle, render/2 rebuilds the scene — and the
-      subscription is torn down the moment we leave this slide
-    - images: protocol auto-probe picks Kitty/Sixel/iTerm2 on capable
-      terminals, halfblocks anywhere else
-    - 3D: primitives, meshes, Phong materials, lights, camera —
-      software-rasterized into half-block cells here (cell modes don't
-      flicker under animation; pixel modes re-transmit per frame)
-    - paste arrives as one %Event.Paste{} instead of shredded
-      keystrokes; OSC 52 covers clipboard copy
-    - markdown and code blocks share syntect highlighting — the notes
-      popup in this deck is the markdown widget
+    - cube is live: Subscription.interval nudges the angle, render rebuilds the scene, torn down on slide change
+    - images: auto-probe kitty / sixel / iterm2, halfblocks elsewhere
+    - 3D: primitives, meshes, phong, lights, camera. rasterizer or a cpu ray tracer, the controls example toggles them live. half-block cells here: cell modes don't flicker, pixel modes re-transmit per frame
+    - paste: one %Event.Paste{}, not shredded keys. OSC 52 for clipboard copy
+    - markdown + code blocks share syntect. the notes popup in this deck is the markdown widget
+    - focus: declarative ring, tab cycles, click to focus via registered rects. theme: eleven semantic slots, pure data threaded through render, no globals
+    - custom widgets: a protocol, compose existing widgets, expanded before the nif. no rust. nesting capped at 32, not expanded inside Popup content or WidgetList items, those inner rects are computed in rust
+    - images gotcha: :fit and :crop never upscale, the guide calls it the most common confusion. no animated gif, no svg, first frame only
+    - 3D: the gpu pipeline is deliberately not exposed, a gpu context inside a nif can take the runtime down. cpu only, on purpose
+    - validation: malformed widget fields raise ArgumentError at encode time, never render garbage
     """
   end
 
@@ -88,7 +85,7 @@ defmodule TuisEverywhere.Slides.AdvancedWidgets do
         title: " live ",
         borders: [:all],
         border_type: :rounded,
-        border_style: %Style{fg: {:rgb, 34, 206, 222}}
+        border_style: Ui.violet_style()
       }
     }
   end

@@ -3,6 +3,7 @@ defmodule SlidesTui.ChromeTest do
 
   alias ExRatatui.Layout.Rect
   alias ExRatatui.Style
+  alias ExRatatui.Text.{Line, Span}
   alias ExRatatui.Widgets.{Block, Paragraph}
   alias SlidesTui.Chrome
 
@@ -10,7 +11,10 @@ defmodule SlidesTui.ChromeTest do
   @footer_rect %Rect{x: 0, y: 23, width: 80, height: 1}
   @accent {:rgb, 225, 31, 193}
   @chip_style %Style{fg: :black, bg: @accent, modifiers: [:bold]}
+  @hint_style %Style{fg: :gray, bg: {:rgb, 58, 62, 78}, modifiers: [:bold]}
+  @violet {:rgb, 167, 139, 250}
   @attribution_style %Style{fg: :dark_gray, modifiers: [:italic]}
+  @attribution_name_style %Style{fg: @violet, modifiers: [:italic]}
 
   describe "layout/1" do
     test "body fills everything above the 1-row footer" do
@@ -63,8 +67,10 @@ defmodule SlidesTui.ChromeTest do
 
       assert {%Paragraph{text: " 1 / 12 ", style: @chip_style}, _} = progress
 
+      # key hints are for the presenter, not the room: muted so the
+      # magenta stays with the border and the progress chip only
       Enum.each(hint_chips, fn {widget, _rect} ->
-        assert %Paragraph{style: @chip_style} = widget
+        assert %Paragraph{style: @hint_style} = widget
       end)
 
       hint_texts = Enum.map(hint_chips, fn {%Paragraph{text: t}, _} -> t end)
@@ -76,10 +82,16 @@ defmodule SlidesTui.ChromeTest do
                " q quit "
              ]
 
+      # "built with " stays muted; the library name carries the violet so
+      # it stands apart from the magenta chrome
       assert {
                %Paragraph{
-                 text: " built with ex_ratatui ",
-                 style: @attribution_style,
+                 text: %Line{
+                   spans: [
+                     %Span{content: " built with ", style: @attribution_style},
+                     %Span{content: "ex_ratatui ", style: @attribution_name_style}
+                   ]
+                 },
                  alignment: :right
                },
                _
@@ -95,8 +107,10 @@ defmodule SlidesTui.ChromeTest do
       [{_, p_rect} | rest] = Chrome.footer(0, 12, @footer_rect)
       {hint_rects, [{_, attr_rect}]} = Enum.split(rest, 4)
 
-      # progress hugs the left edge of the footer
-      assert p_rect.x == @footer_rect.x
+      # progress sits one cell in from the left edge, so its filled
+      # background never touches the screen edge (the attribution on
+      # the right already keeps a cell of padding inside its text)
+      assert p_rect.x == @footer_rect.x + 1
 
       # hints come after the progress chip + flex gap, in order
       assert p_rect.x + p_rect.width <= elem(hd(hint_rects), 1).x

@@ -25,3 +25,4 @@ slides_tui-*.tar
 # Local development notes.
 /docs/dev/
 mise.toml
+faq.md
