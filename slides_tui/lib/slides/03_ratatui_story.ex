@@ -13,7 +13,7 @@ defmodule TuisEverywhere.Slides.RatatuiStory do
     - community maintained: handful of volunteer maintainers, open collective, thousands of stars and crates. all credit to them and to Florian Dehau for tui-rs
     - immediate mode is the trick: every frame is plain data -> plain data can cross into rust once per frame
     - wanted it in elixir. don't write a renderer, bind the best one
-    - february: first version, 5 widgets. today: 0.14, 25 widgets, three companion packages
+    - february: first version, 5 widgets. today: 0.16, 25 widgets, three companion packages, first feature from outside just landed
     """
   end
 

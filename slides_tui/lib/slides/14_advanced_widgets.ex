@@ -25,6 +25,7 @@ defmodule TuisEverywhere.Slides.AdvancedWidgets do
     - images: auto-probe kitty / sixel / iterm2, halfblocks elsewhere
     - 3D: primitives, meshes, phong, lights, camera. rasterizer or a cpu ray tracer, the controls example toggles them live. half-block cells here: cell modes don't flicker, pixel modes re-transmit per frame
     - paste: one %Event.Paste{}, not shredded keys. OSC 52 for clipboard copy
+    - textarea: soft wrap since 0.16, word or glyph, ratatui-textarea does the wrapping and the cursor. first feature from outside the project, thanks shashi
     - markdown + code blocks share syntect. the notes popup in this deck is the markdown widget
     - focus: declarative ring, tab cycles, click to focus via registered rects. theme: eleven semantic slots, pure data threaded through render, no globals
     - custom widgets: a protocol, compose existing widgets, expanded before the nif. no rust. nesting capped at 32, not expanded inside Popup content or WidgetList items, those inner rects are computed in rust
