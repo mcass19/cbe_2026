@@ -5,7 +5,7 @@ defmodule SlidesTui.HostTest do
   alias ExRatatui.Frame
   alias ExRatatui.Layout.Rect
   alias ExRatatui.Widgets.{Block, Clear, Paragraph}
-  alias SlidesTui.{Host, State}
+  alias SlidesTui.{Host, State, Theme}
   alias SlidesTui.Test.Fixtures.DeckBasic
 
   @basic_pattern "test/support/fixtures/deck_basic/*.ex"
@@ -39,6 +39,67 @@ defmodule SlidesTui.HostTest do
     test "asks the runtime to probe for the best image protocol" do
       assert {:ok, _state, runtime_opts} = Host.init(pattern: @basic_pattern)
       assert runtime_opts[:probe_image_protocol] == true
+    end
+  end
+
+  describe "themes" do
+    test "init/1 starts on the default theme with no size guard" do
+      {:ok, state, _} = Host.init(pattern: @basic_pattern)
+      assert state.theme == Theme.default()
+      assert state.min_size == {0, 0}
+    end
+
+    test "init/1 takes :theme and :min_size, and rejects unknown themes" do
+      {:ok, state, _} = Host.init(pattern: @basic_pattern, theme: :daylight, min_size: {152, 39})
+      assert {state.theme, state.min_size} == {:daylight, {152, 39}}
+
+      assert_raise ArgumentError, fn -> Host.init(pattern: @basic_pattern, theme: :neon) end
+    end
+
+    test "t cycles the theme and keeps the slide" do
+      state = basic_state(1)
+      {:noreply, state} = Host.update({:event, key("t")}, state)
+      assert {state.theme, state.index} == {:midnight, 1}
+
+      {:noreply, state} = Host.update({:event, key("t")}, state)
+      {:noreply, state} = Host.update({:event, key("t")}, state)
+      assert state.theme == :dracula
+    end
+
+    test "t works on an empty deck too" do
+      assert {:noreply, %State{theme: :midnight}} =
+               Host.update({:event, key("t")}, %State{slides: []})
+    end
+
+    test "every frame is painted in the active theme's ground and text" do
+      daylight = Theme.fetch!(:daylight)
+      widgets = Host.render(%{basic_state(0) | theme: :daylight}, @frame)
+
+      assert [{%Clear{}, _}, {%Block{borders: [], style: style}, _} | _] = widgets
+      assert {style.fg, style.bg} == {daylight.text, daylight.ground}
+      # the slide helpers read the same theme back while rendering
+      assert Theme.current() == daylight
+    end
+  end
+
+  describe "size guard" do
+    test "a frame below min_size shows both sizes instead of the slide" do
+      state = %{basic_state(0) | min_size: {152, 39}}
+      widgets = Host.render(state, @frame)
+
+      assert [{%Clear{}, _}, {%Block{borders: []}, _}, {%Paragraph{text: text}, rect}] = widgets
+      assert text =~ "terminal is 80×24, the deck needs 152×39"
+      # vertically centred in the frame
+      assert rect.y > 0 and rect.y + rect.height < @frame.height
+    end
+
+    test "too short alone also trips it, and a big enough frame renders the slide" do
+      state = %{basic_state(0) | min_size: {80, 30}}
+      assert [_, _, {%Paragraph{text: text}, _}] = Host.render(state, @frame)
+      assert text =~ "needs 80×30"
+
+      fits = %{basic_state(0) | min_size: {80, 24}}
+      assert [_, _, {%Block{border_type: :rounded}, _} | _] = Host.render(fits, @frame)
     end
   end
 
@@ -200,12 +261,13 @@ defmodule SlidesTui.HostTest do
       state = %{interactive_state() | notes_open?: true}
       widgets = Host.render(state, @frame)
 
-      # Clear, body Block, slide widget, 6 footer widgets (progress,
-      # attribution, 4 hint chips), then 3 popup widgets = 12.
-      assert length(widgets) == 12
+      # Clear, ground Block, body Block, slide widget, 7 footer widgets
+      # (progress, attribution, 5 hint chips), then 3 popup widgets = 14.
+      assert length(widgets) == 14
 
       [
         {%Clear{}, _full_frame},
+        {%Block{borders: []}, _ground},
         {%Block{border_type: :rounded}, _body},
         _slide,
         _progress,
@@ -214,6 +276,7 @@ defmodule SlidesTui.HostTest do
         _hint2,
         _hint3,
         _hint4,
+        _hint5,
         {%Clear{}, popup_rect},
         {%Block{title: " Notes "}, popup_rect2},
         {%ExRatatui.Widgets.Markdown{}, _inner_rect}
@@ -225,8 +288,8 @@ defmodule SlidesTui.HostTest do
     test "popup omitted when notes_open? is false" do
       state = interactive_state()
       widgets = Host.render(state, @frame)
-      # Clear + Block + slide + 6 footer widgets = 9
-      assert length(widgets) == 9
+      # Clear + ground + body Block + slide + 7 footer widgets = 11
+      assert length(widgets) == 11
     end
 
     test "popup omitted when notes_open? but active slide has nil notes" do
@@ -235,8 +298,8 @@ defmodule SlidesTui.HostTest do
       state = %{state | notes_open?: true}
 
       widgets = Host.render(state, @frame)
-      # Counter has no notes — chrome+slide+6-footer-widgets only
-      assert length(widgets) == 9
+      # Counter has no notes — chrome + slide + 7 footer widgets only
+      assert length(widgets) == 11
     end
   end
 
@@ -300,6 +363,7 @@ defmodule SlidesTui.HostTest do
 
       assert [
                {%Clear{}, clear_rect},
+               {%Block{borders: []}, ground_rect},
                {%Block{title: nil, border_type: :rounded}, body_rect},
                {%Paragraph{text: "intro"}, inner_rect},
                {%Paragraph{text: progress_text}, _},
@@ -307,10 +371,12 @@ defmodule SlidesTui.HostTest do
                {%Paragraph{}, _},
                {%Paragraph{}, _},
                {%Paragraph{}, _},
+               {%Paragraph{}, _},
                {%Paragraph{}, _}
              ] = widgets
 
       assert clear_rect == %Rect{x: 0, y: 0, width: 80, height: 24}
+      assert ground_rect == clear_rect
       assert body_rect == %Rect{x: 0, y: 0, width: 80, height: 23}
       assert inner_rect == %Rect{x: 1, y: 1, width: 78, height: 21}
       assert progress_text == " 1 / 3 "
@@ -323,6 +389,7 @@ defmodule SlidesTui.HostTest do
 
       assert [
                {%Clear{}, _},
+               {%Block{borders: []}, _},
                {%Block{title: " Hello ", border_type: :rounded}, body_rect},
                {%Paragraph{text: "body"}, inner_rect}
                | footer_widgets
@@ -330,21 +397,21 @@ defmodule SlidesTui.HostTest do
 
       assert body_rect == %Rect{x: 0, y: 0, width: 80, height: 23}
       assert inner_rect == %Rect{x: 1, y: 1, width: 78, height: 21}
-      # progress + attribution + 4 hint chips
-      assert length(footer_widgets) == 6
+      # progress + attribution + 5 hint chips
+      assert length(footer_widgets) == 7
     end
 
     test "footer progress reflects the active slide's index" do
       widgets = Host.render(basic_state(2), @frame)
-      [_clear, _body, _slide, {%Paragraph{text: progress_text}, _} | _rest] = widgets
+      [_clear, _ground, _body, _slide, {%Paragraph{text: progress_text}, _} | _rest] = widgets
       assert progress_text == " 3 / 3 "
     end
 
-    test "empty deck — Clear then the placeholder Paragraph, no chrome block" do
+    test "empty deck — Clear, ground, then the placeholder Paragraph, no chrome block" do
       state = %State{slides: [], index: 0}
       widgets = Host.render(state, @frame)
 
-      assert [{%Clear{}, _}, {%Paragraph{text: text}, _rect}] = widgets
+      assert [{%Clear{}, _}, {%Block{borders: []}, _}, {%Paragraph{text: text}, _rect}] = widgets
       assert text =~ "No slides found"
     end
 
@@ -353,7 +420,7 @@ defmodule SlidesTui.HostTest do
       {:noreply, state} = Host.update({:event, key("right")}, state)
 
       widgets = Host.render(state, @frame)
-      [_clear, _body, {%Paragraph{text: text}, _inner_rect} | _footer] = widgets
+      [_clear, _ground, _body, {%Paragraph{text: text}, _inner_rect} | _footer] = widgets
       assert text == "count: 42"
     end
   end

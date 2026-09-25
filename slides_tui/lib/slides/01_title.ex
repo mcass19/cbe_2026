@@ -55,9 +55,7 @@ defmodule TuisEverywhere.Slides.Title do
         ]),
         Line.new([]),
         Line.new([
-          Span.new("Code BEAM Europe 2026 · Haarlem, the Netherlands",
-            style: %Style{modifiers: [:dim]}
-          )
+          Span.new("Code BEAM Europe 2026 · Haarlem, the Netherlands", style: Ui.subtle_style())
         ])
       ],
       alignment: :center

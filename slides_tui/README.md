@@ -29,6 +29,18 @@ mix slides.tui --pattern "path/to/slides/*.ex"
 
 Or in code: `SlidesTui.run(pattern: "path/to/slides/*.ex")`.
 
+## Themes
+
+The deck paints every colour itself, background included, so the terminal's own theme never shows through. Three themes ship: `dracula` (the default), `midnight` (near-black, for projectors that wash out dark greys) and `daylight` (off-white, for brightly lit rooms). Start on one with `--theme`, cycle with `t`:
+
+```bash
+mix slides.tui --theme daylight
+```
+
+## Terminal size
+
+The widest slides need a 152×39 grid. Below it the deck shows a "terminal too small" screen with both sizes instead of clipping slides, so the font can be tuned until the deck appears. `--min-size COLSxROWS` overrides the minimum.
+
 ## Controls
 
 | Key | Action |
@@ -36,5 +48,6 @@ Or in code: `SlidesTui.run(pattern: "path/to/slides/*.ex")`.
 | `←` / `h` / `Page Up` | prev slide |
 | `→` / `l` / `Space` / `Page Down` | next slide |
 | `n` | toggle speaker-notes popup |
+| `t` | cycle colour theme |
 | `q` | quit |
 

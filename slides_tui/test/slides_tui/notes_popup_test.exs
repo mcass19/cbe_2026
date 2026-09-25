@@ -21,6 +21,16 @@ defmodule SlidesTui.NotesPopupTest do
       assert inner_rect.y > popup_rect.y
     end
 
+    test "the block repaints the cleared popup in the theme's chip colours" do
+      theme = SlidesTui.Theme.fetch!(:midnight)
+
+      [_, {%Block{style: style, border_style: border}, _}, _] =
+        NotesPopup.overlay("n", @frame, theme)
+
+      assert {style.fg, style.bg} == {theme.chip_fg, theme.chip_bg}
+      assert border.fg == theme.accent
+    end
+
     test "popup is ~70% wide and ~60% tall, centered within the frame" do
       [{_, popup_rect}, _, _] = NotesPopup.overlay("notes", @frame)
       assert popup_rect.width == 56

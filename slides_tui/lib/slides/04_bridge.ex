@@ -74,8 +74,9 @@ defmodule TuisEverywhere.Slides.Bridge do
       {Ui.headline("The bridge"), head},
       {%Paragraph{text: Ui.bullet_lines(@bullets)},
        SlidesLayout.center(text_col, height: bullets_height)},
-      {%CodeBlock{content: @elixir_side, language: "elixir"}, elixir_rect},
-      {%CodeBlock{content: @rust_side, language: "rust"}, rust_rect}
+      {%CodeBlock{content: @elixir_side, language: "elixir", theme: Ui.theme().code_theme},
+       elixir_rect},
+      {%CodeBlock{content: @rust_side, language: "rust", theme: Ui.theme().code_theme}, rust_rect}
     ]
   end
 end

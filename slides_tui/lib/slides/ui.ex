@@ -11,6 +11,11 @@ defmodule TuisEverywhere.Slides.Ui do
   chrome (see `SlidesTui.Chrome`) and a lighter violet for everything
   inside a slide that needs an accent — bullet markers, prompts,
   captions, the title paint. A cyan marks names inside bullets.
+
+  Every colour comes from the active `SlidesTui.Theme` at render time,
+  so slides read them through the functions here rather than module
+  attributes: an attribute would freeze the colour at compile time and
+  miss a theme switch.
   """
 
   alias ExRatatui.{BigText, Layout, Style}
@@ -18,16 +23,7 @@ defmodule TuisEverywhere.Slides.Ui do
   alias ExRatatui.Text.{Line, Span}
   alias ExRatatui.Widgets.{Block, Paragraph}
   alias SlidesTui.Layout, as: SlidesLayout
-
-  # Second hue from the magenta/violet/purple family (#a78bfa) — the
-  # same violet the chrome uses for the `ex_ratatui` attribution, so
-  # every in-slide accent shares one Elixir-flavoured colour without
-  # repeating the magenta of the border and chips.
-  @violet {:rgb, 167, 139, 250}
-  # Third hue (#8be9fd), for names inside bullets — packages, atoms,
-  # modules. A cool counterpart to the magenta/violet pair that stays
-  # legible on a projector; RGB for the same reason as the accent.
-  @cyan {:rgb, 139, 233, 253}
+  alias SlidesTui.Theme
 
   @headline_height 4
   @gap 2
@@ -40,14 +36,20 @@ defmodule TuisEverywhere.Slides.Ui do
     BigText.new(text, pixel_size: :quadrant, alignment: :center)
   end
 
+  @doc "The active theme — for colours without a helper of their own."
+  def theme, do: Theme.current()
+
   @doc "The violet accent — the deck's second hue."
-  def violet, do: @violet
+  def violet, do: theme().violet
 
   @doc "The violet accent as a foreground style."
-  def violet_style, do: %Style{fg: @violet}
+  def violet_style, do: %Style{fg: violet()}
 
   @doc "The cyan for names to look up, as a foreground style."
-  def cyan_style, do: %Style{fg: @cyan}
+  def cyan_style, do: %Style{fg: theme().cyan}
+
+  @doc "Secondary text (subtitles, hints) as a foreground style."
+  def subtle_style, do: %Style{fg: theme().subtle}
 
   @doc """
   A whole content slide in one call: BigText headline on top, a gap,
@@ -91,7 +93,7 @@ defmodule TuisEverywhere.Slides.Ui do
     caption = %Paragraph{
       text: Enum.join(caption_lines, "\n"),
       alignment: :center,
-      style: %Style{fg: @violet}
+      style: violet_style()
     }
 
     [{headline("Demo"), head}, {caption, body}]
@@ -160,7 +162,7 @@ defmodule TuisEverywhere.Slides.Ui do
     hint = %Paragraph{
       text: "drop #{filename} into priv/slides/",
       alignment: :center,
-      style: %Style{modifiers: [:dim]}
+      style: subtle_style()
     }
 
     inner = %{rect | x: rect.x + 1, y: rect.y + 1, width: rect.width - 2, height: rect.height - 2}
@@ -181,7 +183,7 @@ defmodule TuisEverywhere.Slides.Ui do
   def bullet_lines(items) do
     items
     |> Enum.map(fn item ->
-      Line.new([Span.new("▪ ", style: %Style{fg: @violet, modifiers: [:bold]}) | spans(item)])
+      Line.new([Span.new("▪ ", style: %{violet_style() | modifiers: [:bold]}) | spans(item)])
     end)
     |> Enum.intersperse(Line.new([]))
   end

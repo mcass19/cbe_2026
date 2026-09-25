@@ -5,15 +5,15 @@ defmodule SlidesTui.ChromeTest do
   alias ExRatatui.Style
   alias ExRatatui.Text.{Line, Span}
   alias ExRatatui.Widgets.{Block, Paragraph}
-  alias SlidesTui.Chrome
+  alias SlidesTui.{Chrome, Theme}
 
   @frame %Rect{x: 0, y: 0, width: 80, height: 24}
   @footer_rect %Rect{x: 0, y: 23, width: 80, height: 1}
   @accent {:rgb, 225, 31, 193}
   @slate {:rgb, 58, 62, 78}
-  @chip_style %Style{fg: :gray, bg: @slate, modifiers: [:bold]}
+  @chip_style %Style{fg: {:rgb, 248, 248, 242}, bg: @slate, modifiers: [:bold]}
   @violet {:rgb, 167, 139, 250}
-  @attribution_style %Style{fg: :dark_gray, modifiers: [:italic]}
+  @attribution_style %Style{fg: {:rgb, 98, 114, 164}, modifiers: [:italic]}
   @attribution_name_style %Style{fg: @violet, modifiers: [:italic]}
 
   describe "layout/1" do
@@ -55,12 +55,28 @@ defmodule SlidesTui.ChromeTest do
     end
   end
 
+  describe "with another theme" do
+    test "border, chips and attribution all take the theme's colours" do
+      theme = Theme.fetch!(:daylight)
+
+      assert %Block{border_style: %Style{fg: accent}} = Chrome.body_block("x", theme)
+      assert accent == theme.accent
+
+      [{progress, _}, {attribution, _} | _hints] = Chrome.footer(0, 3, @footer_rect, theme)
+      assert %Paragraph{style: %Style{fg: fg, bg: bg}} = progress
+      assert {fg, bg} == {theme.chip_fg, theme.chip_bg}
+
+      assert %Paragraph{text: %Line{spans: [prefix, name]}} = attribution
+      assert {prefix.style.fg, name.style.fg} == {theme.muted, theme.violet}
+    end
+  end
+
   describe "footer/3" do
     test "returns one progress chip, one chip per hint, and an attribution" do
       widgets = Chrome.footer(0, 12, @footer_rect)
 
-      # 1 progress + 4 hint chips + 1 attribution = 6 widgets
-      assert length(widgets) == 6
+      # 1 progress + 5 hint chips + 1 attribution = 7 widgets
+      assert length(widgets) == 7
 
       [progress, attribution | hint_chips] = widgets
 
@@ -78,6 +94,7 @@ defmodule SlidesTui.ChromeTest do
                " ←/h prev ",
                " →/l next ",
                " n notes ",
+               " t theme ",
                " q quit "
              ]
 
@@ -139,9 +156,10 @@ defmodule SlidesTui.ChromeTest do
     end
 
     test "a row too narrow for the true center keeps every hint whole" do
-      # 80 cols can't fit the hints in the right half beside a centered
+      # 100 cols can't fit the hints in the right half beside a centered
       # attribution, so it centers in the gap between chip and hints
-      [{_, p_rect}, {_, attr_rect} | hint_chips] = Chrome.footer(0, 12, @footer_rect)
+      row = %Rect{x: 0, y: 23, width: 100, height: 1}
+      [{_, p_rect}, {_, attr_rect} | hint_chips] = Chrome.footer(0, 12, row)
 
       Enum.each(hint_chips, fn {%Paragraph{text: text}, r} ->
         assert r.width == String.length(text)
@@ -153,9 +171,9 @@ defmodule SlidesTui.ChromeTest do
       assert abs(gap_left - gap_right) <= 1
     end
 
-    test "narrow rect still produces all six widgets" do
+    test "narrow rect still produces all seven widgets" do
       narrow = %Rect{x: 0, y: 0, width: 60, height: 1}
-      assert length(Chrome.footer(0, 5, narrow)) == 6
+      assert length(Chrome.footer(0, 5, narrow)) == 7
     end
   end
 end

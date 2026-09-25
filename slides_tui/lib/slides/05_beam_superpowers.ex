@@ -56,9 +56,6 @@ defmodule TuisEverywhere.Slides.BeamSuperpowers do
     {97, 61}
   ]
 
-  @violet Ui.violet()
-  @magenta {:rgb, 225, 31, 193}
-
   def notes do
     """
     Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since 1966, when designers at Letraset and James Mosley, the librarian at St Bride Printing Library in London, took a 1914 Cicero translation and scrambled it to make dummy text for Letraset's Body Type sheets. It has survived not only many decades, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised thanks to these sheets and more recently with desktop publishing software like Aldus PageMaker and Microsoft Word including versions of Lorem Ipsum.
@@ -83,11 +80,17 @@ defmodule TuisEverywhere.Slides.BeamSuperpowers do
     [head, _gap, sky] =
       Layout.split(bundle, :vertical, [{:length, 4}, {:length, 2}, {:min, 0}])
 
+    # Colours come from the active theme at render time. The canvas
+    # washes its own background, so it gets the theme's ground too;
+    # left unset it would paint the terminal's background as a box.
+    theme = Ui.theme()
+
     canvas = %Canvas{
       x_bounds: {0.0, @x_max},
       y_bounds: {0.0, @y_max},
       marker: :braille,
-      shapes: [%Points{coords: stars(), color: :dark_gray} | rocket(tick)]
+      background_color: theme.ground,
+      shapes: [%Points{coords: stars(), color: theme.muted} | rocket(tick, theme)]
     }
 
     [{Ui.headline("BEAM superpowers"), head}, {canvas, sky}]
@@ -102,26 +105,26 @@ defmodule TuisEverywhere.Slides.BeamSuperpowers do
     {-20.0 + (@x_max + 40.0) * t, -15.0 + (@y_max + 30.0) * t}
   end
 
-  defp rocket(tick) do
+  defp rocket(tick, theme) do
     {cx, cy} = position(tick)
     place = &transform(&1, cx, cy)
 
     hull =
       [@body, @nose, @fin_top, @fin_bottom]
-      |> Enum.flat_map(&polyline(&1, place, @violet))
+      |> Enum.flat_map(&polyline(&1, place, theme.violet))
 
-    hull ++ flame(tick, place)
+    hull ++ flame(tick, place, theme.accent)
   end
 
   # Two-frame flicker: the exhaust alternates between a short and a
   # long plume every tick.
-  defp flame(tick, place) do
+  defp flame(tick, place, color) do
     len = if rem(tick, 2) == 0, do: 5, else: 8
     core = [{-6, 0}, {-6 - len, 0}]
     upper = [{-6, 1}, {-6 - len * 0.6, 1.5}]
     lower = [{-6, -1}, {-6 - len * 0.6, -1.5}]
 
-    Enum.flat_map([core, upper, lower], &polyline(&1, place, @magenta))
+    Enum.flat_map([core, upper, lower], &polyline(&1, place, color))
   end
 
   defp polyline(points, place, color) do

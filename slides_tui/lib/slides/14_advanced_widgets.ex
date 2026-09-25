@@ -6,11 +6,12 @@ defmodule TuisEverywhere.Slides.AdvancedWidgets do
   alias ExRatatui.ThreeD.{Camera, Light, Material, Mesh, Object, Scene, Transform}
   alias ExRatatui.Widgets.{Block, Paragraph, Viewport3D}
   alias SlidesTui.Layout, as: SlidesLayout
+  alias SlidesTui.Theme
   alias TuisEverywhere.Slides.Ui
 
   @bullets [
     "`images` — Kitty / Sixel / iTerm2, halfblock fallback",
-    "`3D` — lit scenes rasterized into cells (live, over there)",
+    "`3D` — lit scenes rasterized into cells",
     "`copy & paste` — bracketed paste, one event per paste",
     "`markdown & code` — syntect-highlighted, straight from strings",
     "`focus ring` + `mouse hit-testing`, an eleven-slot theme palette",
@@ -52,30 +53,38 @@ defmodule TuisEverywhere.Slides.AdvancedWidgets do
   end
 
   defp viewport(angle) do
+    theme = Ui.theme()
+
     cube = %Object{
       mesh: Mesh.cube(),
-      material: %Material{color: {225, 31, 193}},
+      material: %Material{color: Theme.rgb(theme.accent)},
       transform: %Transform{rotation: {:euler_xyz, {angle * 0.3, angle, 0.0}}}
     }
 
     %Viewport3D{
       scene: %Scene{
         objects: [cube],
+        # Enough ambient that the faces turned from the light stay a dark
+        # magenta; at 0.2 they went near-black against the ground.
         lights: [
-          Light.ambient({255, 255, 255}, 0.2),
+          Light.ambient({255, 255, 255}, 0.35),
           Light.directional({-1.0, -1.0, -1.0}, {255, 255, 255}),
           Light.point({2.0, 3.0, 2.0}, {180, 220, 255})
         ],
-        # The terminal's own ground (Dracula #282a36), so the cube
-        # floats on the slide instead of sitting in a black box.
-        background: {40, 42, 54}
+        # The theme's ground, so the cube floats on the slide instead
+        # of sitting in a box of another colour.
+        background: Theme.rgb(theme.ground)
       },
-      camera: %Camera{position: {3.0, 2.5, 4.0}, target: {0.0, 0.0, 0.0}},
-      # A cell mode on purpose: pixel modes re-transmit the image every
-      # frame and flicker under continuous animation; half-block doesn't.
-      render_mode: :half_block,
+      # Close enough that the cube fills most of the box.
+      camera: %Camera{position: {1.8, 1.5, 2.4}, target: {0.0, 0.0, 0.0}},
+      # Real pixels on a graphics-capable terminal (Kitty protocol in
+      # Ghostty, like bb_tui's robot), braille cells elsewhere. The host
+      # probes the terminal on start, which pixel modes need for the
+      # cell size. Pixel modes re-send the image every frame; if the
+      # spin flickers on the presenting terminal, `:braille` is the
+      # smooth cell-mode fallback.
+      render_mode: :auto,
       block: %Block{
-        title: " live ",
         borders: [:all],
         border_type: :rounded,
         border_style: Ui.violet_style()

@@ -54,9 +54,6 @@ defmodule TuisEverywhere.Slides.Demo do
   @name [{-10, -33}, {10, -33}]
   @role [{-10, -40}, {2, -40}]
 
-  @violet Ui.violet()
-  @magenta {:rgb, 225, 31, 193}
-
   def notes do
     """
     Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since 1966, when designers at Letraset and James Mosley, the librarian at St Bride Printing Library in London, took a 1914 Cicero translation and scrambled it to make dummy text for Letraset's Body Type sheets. It has survived not only many decades, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised thanks to these sheets and more recently with desktop publishing software like Aldus PageMaker and Microsoft Word including versions of Lorem Ipsum.
@@ -78,11 +75,18 @@ defmodule TuisEverywhere.Slides.Demo do
     [head, _gap, stage] =
       Layout.split(bundle, :vertical, [{:length, 4}, {:length, 2}, {:min, 0}])
 
+    # Theme colours at render time; the canvas background too, or it
+    # paints the terminal's own background as a box (see the rocket).
+    theme = Ui.theme()
+
     canvas = %Canvas{
       x_bounds: {0.0, @x_max},
       y_bounds: {0.0, @y_max},
       marker: :braille,
-      shapes: frame() ++ seats() ++ curtains(tick) ++ badge(tick)
+      background_color: theme.ground,
+      shapes:
+        frame(theme.violet) ++
+          seats(theme.violet) ++ curtains(tick, theme.accent) ++ badge(tick, theme)
     }
 
     [{Ui.headline("Demo!"), head}, {canvas, stage}]
@@ -116,7 +120,7 @@ defmodule TuisEverywhere.Slides.Demo do
   @doc "The badge's swing angle (radians) for a tick — a full sine period per swing."
   def angle(tick), do: @swing_amplitude * :math.sin(2 * :math.pi() * tick / @swing_ticks)
 
-  defp frame do
+  defp frame(color) do
     polyline(
       [
         {@stage_left, @stage_bottom},
@@ -126,21 +130,21 @@ defmodule TuisEverywhere.Slides.Demo do
         {@stage_left, @stage_bottom}
       ],
       & &1,
-      @violet
+      color
     )
   end
 
-  defp seats do
+  defp seats(color) do
     for y <- @seat_rows, x <- @seat_columns, reduce: [] do
       acc ->
-        polyline([{x - 4, y + 5}, {x - 4, y}, {x + 4, y}, {x + 4, y + 5}], & &1, @violet) ++ acc
+        polyline([{x - 4, y + 5}, {x - 4, y}, {x + 4, y}, {x + 4, y + 5}], & &1, color) ++ acc
     end
   end
 
   # Two panels that part from the centre. Each panel keeps @folds
   # vertical lines spread across whatever width it still covers, so the
   # folds bunch up as the curtain gathers at the edge.
-  defp curtains(tick) do
+  defp curtains(tick, color) do
     open = open_fraction(tick)
     centre = (@stage_left + @stage_right) / 2
     half = (@stage_right - @stage_left) / 2
@@ -153,28 +157,28 @@ defmodule TuisEverywhere.Slides.Demo do
     top = @stage_top - 2
     bottom = @stage_bottom + 2
 
-    folds(@stage_left + 1, left_edge, top, bottom) ++
-      folds(right_edge, @stage_right - 1, top, bottom)
+    folds(@stage_left + 1, left_edge, top, bottom, color) ++
+      folds(right_edge, @stage_right - 1, top, bottom, color)
   end
 
-  defp folds(from, to, top, bottom) do
+  defp folds(from, to, top, bottom, color) do
     step = (to - from) / @folds
 
     for i <- 0..@folds do
       x = from + i * step
-      %Line{x1: x, y1: top, x2: x, y2: bottom, color: @magenta}
+      %Line{x1: x, y1: top, x2: x, y2: bottom, color: color}
     end
   end
 
   # The badge only shows once the curtains have parted enough to clear it.
-  defp badge(tick) do
+  defp badge(tick, theme) do
     if open_fraction(tick) < 0.5 do
       []
     else
       place = &transform(&1, angle(tick))
 
-      Enum.flat_map([@strap_left, @strap_right], &polyline(&1, place, @magenta)) ++
-        Enum.flat_map([@badge, @clip, @name, @role], &polyline(&1, place, @violet))
+      Enum.flat_map([@strap_left, @strap_right], &polyline(&1, place, theme.accent)) ++
+        Enum.flat_map([@badge, @clip, @name, @role], &polyline(&1, place, theme.violet))
     end
   end
 
