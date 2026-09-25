@@ -27,18 +27,7 @@ defmodule TuisEverywhere.Slides.Lobby do
 
   def notes do
     """
-    - phones out, url + qr on screen, or ssh from your laptops
-    - lobby_tui: the theatre from the interstitial, for real. a small pixel-art room, seats in front, a stage behind curtains
-    - what everybody is about to do: pick a nick and an avatar, walk in with the arrows, grab a seat. seated -> post, it lands on the stage feed, everyone sees it
-    - all in memory: ash on ets, presence for who is where, pubsub for the feed. leave -> gone, restart -> wiped. no personal info please
-
-    - browser tab: lobby-tui.fly.dev (already open). pick avatar, walk, grab a seat near the stage
-    - enough people seated -> open the curtains, stage feed shows what the seated crowd posts
-    - terminal tab: hit enter on the typed `ssh <nick>@lobby-tui.fly.dev`, same room. the nick is `ssh_user` in mount, per-connection identity from the transport
-    - browser tab: the livebook, already attached and evaluated, same room from a cell
-
-    - one app module, EVERYWHERE
-    - leave it running, glance at it before thanks
+    Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since 1966, when designers at Letraset and James Mosley, the librarian at St Bride Printing Library in London, took a 1914 Cicero translation and scrambled it to make dummy text for Letraset's Body Type sheets. It has survived not only many decades, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised thanks to these sheets and more recently with desktop publishing software like Aldus PageMaker and Microsoft Word including versions of Lorem Ipsum.
     """
   end
 

@@ -59,28 +59,7 @@ defmodule TuisEverywhere.Slides.Demo do
 
   def notes do
     """
-    prep:
-    - badge charged, firmware from the name_badge `raster_ex_ratatui` branch (PR #3), talk messages set in Banner's `@messages`
-    - badge menu on Banner before walking up, Showcase one B-long away
-    - lobby-tui.fly.dev up: `fly status`, open once to warm it
-    - wireguard up: `sudo wg-quick up ./lobby-wg.conf`
-    - node name + cookie (change on every deploy):
-        fly ssh console --app lobby-tui -C "/app/bin/lobby_tui rpc 'IO.puts(Node.self()); IO.puts(Node.get_cookie())'"
-    - livebook:
-        LIVEBOOK_DISTRIBUTION=name ERL_AFLAGS="-proto_dist inet6_tcp" livebook server notebooks/lobby.livemd
-      runtime -> attached node -> name + cookie -> connect -> evaluate once, room on screen
-
-    windows:
-    - terminal 1: this deck
-    - terminal 2: livebook server running, plus a tab with `ssh mauri@lobby-tui.fly.dev` typed, not sent
-    - browser tabs: livebook (attached, evaluated), lobby-tui.fly.dev, hexdocs.pm/ex_ratatui
-    - phone on the wifi, url open
-
-    on stage:
-    - the raster from last slide, live. goatmire badge, credit Gus Workman and Lars Wikman. nerves, 400x300 e-ink, 1 bit, two buttons, the armv7 precompiled nif
-    - banner: BigText messages taking turns, each one ink on paper then paper on ink, 3s a step. not a gimmick: partial-refresh e-ink ghosts unless every pixel gets driven both ways. A pauses, B skips ahead
-    - B long -> menu -> showcase: a shaded 3D object and a photo as pixel regions, bayer dithered, next to a live beam dashboard in plain cells, sparklines + gauge, 2s tick. A next object (cube, orbit, cylinder), A long next photo, B pause
-    - same Viewport3D as kitty on the laptop, same widgets, no terminal within a kilometre
+    Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since 1966, when designers at Letraset and James Mosley, the librarian at St Bride Printing Library in London, took a 1914 Cicero translation and scrambled it to make dummy text for Letraset's Body Type sheets. It has survived not only many decades, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised thanks to these sheets and more recently with desktop publishing software like Aldus PageMaker and Microsoft Word including versions of Lorem Ipsum.
     """
   end
 

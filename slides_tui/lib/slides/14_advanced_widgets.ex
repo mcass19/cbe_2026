@@ -21,17 +21,7 @@ defmodule TuisEverywhere.Slides.AdvancedWidgets do
 
   def notes do
     """
-    - cube is live: Subscription.interval nudges the angle, render rebuilds the scene, torn down on slide change
-    - images: auto-probe kitty / sixel / iterm2, halfblocks elsewhere
-    - 3D: primitives, meshes, phong, lights, camera. rasterizer or a cpu ray tracer, the controls example toggles them live. half-block cells here: cell modes don't flicker, pixel modes re-transmit per frame
-    - paste: one %Event.Paste{}, not shredded keys. OSC 52 for clipboard copy
-    - textarea: soft wrap since 0.16, word or glyph, ratatui-textarea does the wrapping and the cursor. first feature from outside the project, thanks shashi
-    - markdown + code blocks share syntect. the notes popup in this deck is the markdown widget
-    - focus: declarative ring, tab cycles, click to focus via registered rects. theme: eleven semantic slots, pure data threaded through render, no globals
-    - custom widgets: a protocol, compose existing widgets, expanded before the nif. no rust. nesting capped at 32, not expanded inside Popup content or WidgetList items, those inner rects are computed in rust
-    - images gotcha: :fit and :crop never upscale, the guide calls it the most common confusion. no animated gif, no svg, first frame only
-    - 3D: the gpu pipeline is deliberately not exposed, a gpu context inside a nif can take the runtime down. cpu only, on purpose
-    - validation: malformed widget fields raise ArgumentError at encode time, never render garbage
+    Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since 1966, when designers at Letraset and James Mosley, the librarian at St Bride Printing Library in London, took a 1914 Cicero translation and scrambled it to make dummy text for Letraset's Body Type sheets. It has survived not only many decades, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised thanks to these sheets and more recently with desktop publishing software like Aldus PageMaker and Microsoft Word including versions of Lorem Ipsum.
     """
   end
 

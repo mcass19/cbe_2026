@@ -20,15 +20,7 @@ defmodule TuisEverywhere.Slides.Phoenix do
 
   def notes do
     """
-    - first thing wearing a cell session: phoenix_ex_ratatui. same relation as kino to the byte stream
-    - no xterm, no ansi. cell diffs over the liveview socket, tiny hook paints spans. ~5KB js
-    - 0.3, pixel regions: the hook measures the font's cell size and sends it with the resize -> the session gets a font size -> 3D + images come back as png data urls, one <img> each in a layer over the grid. full res in a browser. the screenshot is /cube in the demo app: spinning cube next to a photo, m toggles both back to cells for the comparison
-    - two shapes: LiveView full page, LiveComponent inside a page. same module is the liveview and the app
-    - both runtimes
-    - handlers return navigate / patch / redirect intents
-    - bandwidth: a static screen costs nothing, a ticking dashboard costs the cells that changed. regions only travel when the set changed, so a still picture is free too. halfblock images are the expensive case, png regions are cheaper and sharper
-    - a11y: cells are spans in the dom, screen readers see text, not a canvas
-    - the room is about to be inside this one in a bit
+    Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since 1966, when designers at Letraset and James Mosley, the librarian at St Bride Printing Library in London, took a 1914 Cicero translation and scrambled it to make dummy text for Letraset's Body Type sheets. It has survived not only many decades, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised thanks to these sheets and more recently with desktop publishing software like Aldus PageMaker and Microsoft Word including versions of Lorem Ipsum.
     """
   end
 
