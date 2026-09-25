@@ -9,12 +9,12 @@ defmodule TuisEverywhere.Slides.AdvancedWidgets do
   alias TuisEverywhere.Slides.Ui
 
   @bullets [
-    "images — Kitty / Sixel / iTerm2, halfblock fallback",
-    "3D — lit scenes rasterized into cells (live, over there)",
-    "copy & paste — bracketed paste, one event per paste",
-    "markdown & code — syntect-highlighted, straight from strings",
-    "focus ring + mouse hit-testing, an eleven-slot theme palette",
-    "custom widgets — compose existing ones in pure Elixir, no Rust"
+    "`images` — Kitty / Sixel / iTerm2, halfblock fallback",
+    "`3D` — lit scenes rasterized into cells (live, over there)",
+    "`copy & paste` — bracketed paste, one event per paste",
+    "`markdown & code` — syntect-highlighted, straight from strings",
+    "`focus ring` + `mouse hit-testing`, an eleven-slot theme palette",
+    "`custom widgets` — compose existing ones in pure Elixir, no Rust"
   ]
 
   def title, do: "Advanced widgets"
@@ -76,7 +76,9 @@ defmodule TuisEverywhere.Slides.AdvancedWidgets do
           Light.directional({-1.0, -1.0, -1.0}, {255, 255, 255}),
           Light.point({2.0, 3.0, 2.0}, {180, 220, 255})
         ],
-        background: {8, 8, 16}
+        # The terminal's own ground (Dracula #282a36), so the cube
+        # floats on the slide instead of sitting in a black box.
+        background: {40, 42, 54}
       },
       camera: %Camera{position: {3.0, 2.5, 4.0}, target: {0.0, 0.0, 0.0}},
       # A cell mode on purpose: pixel modes re-transmit the image every

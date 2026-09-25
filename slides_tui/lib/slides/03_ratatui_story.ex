@@ -23,7 +23,7 @@ defmodule TuisEverywhere.Slides.RatatuiStory do
       "immediate mode: describe the frame, ratatui diffs the rest",
       "rich widgets: paragraphs, tables, charts, canvas, and friends",
       "wanted on the BEAM: processes, supervision, distribution",
-      "ex_ratatui — bind the best renderer instead of writing one, via Rustler"
+      "`ex_ratatui` — bind the best renderer instead of writing one, via `Rustler`"
     ])
   end
 end

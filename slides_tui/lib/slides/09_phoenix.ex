@@ -11,8 +11,9 @@ defmodule TuisEverywhere.Slides.Phoenix do
     "cells over the socket: structured diffs, not ANSI",
     "a ~5KB JS hook paints cells straight into the DOM",
     "pixel regions ride along as PNG: 3D and images at full resolution",
-    "full page LiveView, or a LiveComponent inside one",
-    "navigation intents: {:navigate, path} from any handler"
+    "full page LiveView, or a `LiveComponent` inside one",
+    "navigation intents: `{:navigate, path}` from any handler",
+    {:links, ["hex.pm/packages/phoenix_ex_ratatui", "phoenix-ex-ratatui.hexdocs.pm"]}
   ]
 
   def title, do: "phoenix_ex_ratatui"

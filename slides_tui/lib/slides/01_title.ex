@@ -42,15 +42,28 @@ defmodule TuisEverywhere.Slides.Title do
   def handle_info(_msg, state), do: {:noreply, state}
 
   def render(%{tick: tick}, area) do
-    bundle = SlidesLayout.center(area, height: 9)
+    bundle = SlidesLayout.center(area, height: 4 + 2 + 3)
 
     [banner, _gap, sub] =
       Layout.split(bundle, :vertical, [{:length, 4}, {:length, 2}, {:min, 0}])
 
+    # Who first, where second: the name stays up while the room settles,
+    # the handle in the deck's cyan like every other name to look up.
     subtitle = %Paragraph{
-      text: "Code BEAM Europe 2026 - Haarlem, the Netherlands",
-      alignment: :center,
-      style: %Style{modifiers: [:dim]}
+      text: [
+        Line.new([
+          Span.new("Mauricio Cassola", style: %Style{modifiers: [:bold]}),
+          Span.new(" · "),
+          Span.new("mcass19", style: Ui.cyan_style())
+        ]),
+        Line.new([]),
+        Line.new([
+          Span.new("Code BEAM Europe 2026 · Haarlem, the Netherlands",
+            style: %Style{modifiers: [:dim]}
+          )
+        ])
+      ],
+      alignment: :center
     }
 
     [{Ui.headline(painted_title(min(tick, @letters))), banner}, {subtitle, sub}]

@@ -10,7 +10,7 @@ defmodule TuisEverywhere.Slides.Ui do
   The palette is two hues from one family: Code BEAM magenta for the
   chrome (see `SlidesTui.Chrome`) and a lighter violet for everything
   inside a slide that needs an accent — bullet markers, prompts,
-  captions, the title paint.
+  captions, the title paint. A cyan marks names inside bullets.
   """
 
   alias ExRatatui.{BigText, Layout, Style}
@@ -24,6 +24,10 @@ defmodule TuisEverywhere.Slides.Ui do
   # every in-slide accent shares one Elixir-flavoured colour without
   # repeating the magenta of the border and chips.
   @violet {:rgb, 167, 139, 250}
+  # Third hue (#8be9fd), for names inside bullets — packages, atoms,
+  # modules. A cool counterpart to the magenta/violet pair that stays
+  # legible on a projector; RGB for the same reason as the accent.
+  @cyan {:rgb, 139, 233, 253}
 
   @headline_height 4
   @gap 2
@@ -42,6 +46,9 @@ defmodule TuisEverywhere.Slides.Ui do
   @doc "The violet accent as a foreground style."
   def violet_style, do: %Style{fg: @violet}
 
+  @doc "The cyan for names to look up, as a foreground style."
+  def cyan_style, do: %Style{fg: @cyan}
+
   @doc """
   A whole content slide in one call: BigText headline on top, a gap,
   then a left-aligned bullet column centered in the remaining space.
@@ -49,7 +56,7 @@ defmodule TuisEverywhere.Slides.Ui do
   """
   def headline_with_bullets(area, text, items) when is_list(items) do
     lines = bullet_lines(items)
-    width = 2 + (items |> Enum.map(&String.length/1) |> Enum.max())
+    width = 2 + (items |> Enum.map(&item_width/1) |> Enum.max())
 
     bundle = SlidesLayout.center(area, height: @headline_height + @gap + length(lines))
 
@@ -162,15 +169,38 @@ defmodule TuisEverywhere.Slides.Ui do
 
   def figure(image, _filename, rect), do: [{image, rect}]
 
-  @doc "Bullet items as `Line`s — violet marker, blank line between items."
+  @doc """
+  Bullet items as `Line`s — violet marker, blank line between items.
+
+  An item is either a string, where `` `backticked` `` names (packages,
+  atoms, modules) come out in cyan, or `{:links, urls}`, which renders
+  the urls cyan and dot-separated like the closing slide. Links are
+  never dim: a projector washes dim text out, and links are what the
+  room copies down.
+  """
   def bullet_lines(items) do
     items
     |> Enum.map(fn item ->
-      Line.new([
-        Span.new("▪ ", style: %Style{fg: @violet, modifiers: [:bold]}),
-        Span.new(item)
-      ])
+      Line.new([Span.new("▪ ", style: %Style{fg: @violet, modifiers: [:bold]}) | spans(item)])
     end)
     |> Enum.intersperse(Line.new([]))
+  end
+
+  @doc "The on-screen width of a bullet item, markup excluded."
+  def item_width(item), do: item |> spans() |> Enum.map(&String.length(&1.content)) |> Enum.sum()
+
+  defp spans({:links, urls}),
+    do: [Span.new(Enum.join(urls, " · "), style: cyan_style())]
+
+  # Splitting on backticks leaves the marked names at the odd positions.
+  defp spans(text) when is_binary(text) do
+    text
+    |> String.split("`")
+    |> Enum.with_index()
+    |> Enum.reject(fn {part, _i} -> part == "" end)
+    |> Enum.map(fn
+      {part, i} when rem(i, 2) == 1 -> Span.new(part, style: cyan_style())
+      {part, _i} -> Span.new(part)
+    end)
   end
 end

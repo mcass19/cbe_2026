@@ -20,13 +20,12 @@ defmodule TuisEverywhere.Slides.TuisOutThere do
 
   def render(_state, area) do
     Ui.headline_with_bullets(area, "Built with it", [
-      "this deck — slides_tui",
-      "the badge and the pi — nerves + raster_ex_ratatui",
-      "the lobby_tui — ssh + phoenix_ex_ratatui + kino_ex_ratatui",
-      "ash_tui — explore Ash Framework resources",
-      "bb_tui — terminal-based dashboard for Beam Bots robots",
-      "community: ex_athena, beamcore, switchyard, caudata, extop, phoenix_gen_api_tui… yours!?",
-      "bag full of ideas :)"
+      "this deck — `slides_tui`",
+      "the badge and the pi — `nerves` + `raster_ex_ratatui`",
+      "`lobby_tui` — ssh + `phoenix_ex_ratatui` + `kino_ex_ratatui`",
+      "`ash_tui` — explore Ash Framework resources",
+      "`bb_tui` — terminal-based dashboard for Beam Bots robots",
+      "community: `ex_athena`, `beamcore`, `switchyard`, `caudata`, `extop`, `phoenix_gen_api_tui`… yours!?"
     ])
   end
 end

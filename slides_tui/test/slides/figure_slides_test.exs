@@ -2,6 +2,8 @@ defmodule TuisEverywhere.Slides.FigureSlidesTest do
   use ExUnit.Case, async: true
 
   alias ExRatatui.Layout.Rect
+  alias ExRatatui.Style
+  alias ExRatatui.Text.{Line, Span}
   alias ExRatatui.Widgets.{BigText, Block, Image, Paragraph}
   alias TuisEverywhere.Slides.{Kino, Lobby, Phoenix, Raster, Ui}
 
@@ -14,6 +16,32 @@ defmodule TuisEverywhere.Slides.FigureSlidesTest do
 
     test "returns nil for a missing file" do
       assert Ui.load_image("does_not_exist.png") == nil
+    end
+  end
+
+  describe "Ui.bullet_lines/1" do
+    test "backticked names come out cyan, markup stripped" do
+      [%Line{spans: [_marker | spans]}] = Ui.bullet_lines(["`:local` — the `tty` here"])
+
+      assert [
+               %Span{content: ":local", style: %Style{fg: {:rgb, 139, 233, 253}}},
+               %Span{content: " — the ", style: plain},
+               %Span{content: "tty", style: %Style{fg: {:rgb, 139, 233, 253}}},
+               %Span{content: " here"}
+             ] = spans
+
+      assert plain.fg == nil
+    end
+
+    test "a links item renders cyan (never dim) and dot-separated" do
+      [%Line{spans: [_marker, link]}] = Ui.bullet_lines([{:links, ["a.pm", "b.pm"]}])
+      assert %Span{content: "a.pm · b.pm", style: %Style{fg: {:rgb, 139, 233, 253}}} = link
+      refute :dim in link.style.modifiers
+    end
+
+    test "item_width/1 counts what is on screen" do
+      assert Ui.item_width("`:ssh` — x") == String.length(":ssh — x")
+      assert Ui.item_width({:links, ["a.pm", "b.pm"]}) == String.length("a.pm · b.pm")
     end
   end
 

@@ -9,7 +9,6 @@ defmodule TuisEverywhere.Slides.Bridge do
   alias TuisEverywhere.Slides.Ui
 
   @elixir_side """
-  # a widget is a struct — data, no process, no state
   %Paragraph{text: "Hello!", style: %Style{fg: :green}, alignment: :center}
 
   # once per frame, the whole widget list becomes plain maps...
@@ -34,10 +33,10 @@ defmodule TuisEverywhere.Slides.Bridge do
 
   @bullets [
     "widgets are plain Elixir structs — data in, cells out",
-    "Rustler: one NIF call per frame, maps in, ratatui renders",
+    "`Rustler` — one NIF call per frame, maps in, ratatui renders",
     "layout is ratatui's constraint solver — Elixir never does cell math",
     "events polled on a dirty IO scheduler, delivered as messages",
-    "rustler_precompiled: no Rust toolchain needed"
+    "`rustler_precompiled` — no Rust toolchain needed"
   ]
 
   def title, do: "Rustler"

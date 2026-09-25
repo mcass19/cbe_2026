@@ -25,11 +25,11 @@ defmodule TuisEverywhere.Slides.Observability do
 
   def render(_state, area) do
     Ui.headline_with_bullets(area, "Trust it, ship it", [
-      "test — test_mode {w, h}: the real runtime on a virtual terminal, no TTY, async",
-      "debug — runtime snapshot, a trace ring buffer, headless buffer inspection",
-      "telemetry — spans on init / event / update / frame / connect, widget_count per frame",
-      "perf — 16ms poll ≈ 60fps, draw + poll on DirtyIo, quiet frames near free",
-      "ship — Burrito: one native binary per OS, no Erlang on the user's machine"
+      "`test` — test_mode {w, h}: the real runtime on a virtual terminal, no TTY, async",
+      "`debug` — runtime snapshot, a trace ring buffer, headless buffer inspection",
+      "`telemetry` — spans for every phase of the loop, widget counts per frame",
+      "`perf` — 16ms poll ≈ 60fps, draw + poll on DirtyIo, quiet frames near free",
+      "`ship` — Burrito: one native binary per OS, no Erlang on the user's machine"
     ])
   end
 end

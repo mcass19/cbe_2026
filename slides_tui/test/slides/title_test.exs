@@ -3,8 +3,9 @@ defmodule TuisEverywhere.Slides.TitleTest do
 
   alias ExRatatui.Layout.Rect
   alias ExRatatui.Subscription
-  alias ExRatatui.Text.Line
-  alias ExRatatui.Widgets.BigText
+  alias ExRatatui.Style
+  alias ExRatatui.Text.{Line, Span}
+  alias ExRatatui.Widgets.{BigText, Paragraph}
   alias TuisEverywhere.Slides.Title
 
   @area %Rect{x: 0, y: 0, width: 120, height: 30}
@@ -59,6 +60,18 @@ defmodule TuisEverywhere.Slides.TitleTest do
 
     assert painted(tick(held, 1)) == ""
     assert painted(tick(held, 2)) == "T"
+  end
+
+  test "names the speaker above the event line" do
+    {:ok, state} = Title.mount([])
+    [_headline, {%Paragraph{text: [who, _blank, where]}, _rect}] = Title.render(state, @area)
+
+    assert Enum.map_join(who.spans, & &1.content) == "Mauricio Cassola · mcass19"
+
+    assert %Span{content: "mcass19", style: %Style{fg: {:rgb, 139, 233, 253}}} =
+             List.last(who.spans)
+
+    assert Enum.map_join(where.spans, & &1.content) =~ "Code BEAM Europe 2026 · Haarlem"
   end
 
   test "keeps one interval subscription while active" do

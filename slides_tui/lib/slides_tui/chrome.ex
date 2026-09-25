@@ -4,10 +4,10 @@ defmodule SlidesTui.Chrome do
 
   Every slide is rendered inside a rounded magenta `Block` that fills
   the full body area; the slide's `title/0` (if any) shows as the
-  block's title. A 1-row footer at the bottom carries a magenta progress
-  chip on the left, one muted chip per key hint in the middle, and a subtle
-  italic attribution on the right (muted "built with", library name in
-  violet).
+  block's title. A 1-row footer at the bottom carries a muted progress
+  chip on the left, a subtle italic attribution in the center (muted
+  "built with", library name in violet), and one muted chip per key hint
+  on the right.
 
   All functions here are pure (no side effects, no global state).
   The host calls `layout/1` once per frame, then uses `body_block/1`
@@ -29,11 +29,12 @@ defmodule SlidesTui.Chrome do
   # magenta chrome around it. Light enough to survive italics on a dark
   # ground; Elixir's official #4e2a8e would sink into it.
   @violet {:rgb, 167, 139, 250}
-  # Key hints are for the presenter, not the room. A slate a notch
-  # lighter than the terminal ground keeps them legible without adding
-  # four more magenta blocks to the footer; the progress chip alone
-  # keeps the accent so the magenta stays on the border and one chip.
-  @hint_bg {:rgb, 58, 62, 78}
+  # Footer chips are for the presenter, not the room: the progress chip
+  # and the key hints share one muted look, a slate a notch lighter than
+  # the terminal ground, so none of them pulls the eye off the slide.
+  # Magenta on slate read dimmer than the gray; the accent stays on the
+  # border.
+  @chip_bg {:rgb, 58, 62, 78}
   @hints ["←/h prev", "→/l next", "n notes", "q quit"]
   @attribution_prefix "built with "
   @attribution_name "ex_ratatui"
@@ -81,47 +82,63 @@ defmodule SlidesTui.Chrome do
   defp block_title(title), do: " #{title} "
 
   @doc """
-  Footer widgets — a magenta progress chip on the left, one muted slate
-  chip per key hint in the middle, and an italic attribution on the right ("built with"
-  in gray, the library name in violet).
+  Footer widgets — a muted slate progress chip on the left, an italic
+  attribution centered on the row ("built with" in gray, the library
+  name in violet), and one chip of the same look per key hint on the
+  right.
 
-  Returns a list of `{widget, rect}` tuples so the host can splat them
-  into its render output. Each segment owns a dedicated horizontal
-  slice of the footer row, which lets each chip carry its own
-  background and lets the hints breathe between separators.
+  Returns a list of `{widget, rect}` tuples, left to right, so the host
+  can splat them into its render output. Each
+  segment owns a dedicated horizontal slice of the footer row, which
+  lets each chip carry its own background and lets the hints breathe
+  between separators.
   """
   @spec footer(non_neg_integer(), pos_integer(), Rect.t()) ::
           [{Paragraph.t(), Rect.t()}]
   def footer(current_index, total, %Rect{} = rect)
       when is_integer(current_index) and is_integer(total) and
              current_index >= 0 and total > 0 do
-    segments =
-      [{:gap, 1}, {:chip, " #{current_index + 1} / #{total} "}, :flex] ++
-        Enum.intersperse(Enum.map(@hints, &{:hint, " #{&1} "}), {:gap, 1}) ++
-        [{:gap, 2}, {:attr, " #{@attribution_prefix}#{@attribution_name} "}]
+    attr = {:attr, " #{@attribution_prefix}#{@attribution_name} "}
+    progress = [{:gap, 1}, {:chip, " #{current_index + 1} / #{total} "}]
+    hints = Enum.intersperse(Enum.map(@hints, &{:hint, " #{&1} "}), {:gap, 1}) ++ [{:gap, 1}]
 
-    constraints =
-      Enum.map(segments, fn
-        :flex -> {:min, 0}
-        {:gap, n} -> {:length, n}
-        {_kind, text} -> {:length, String.length(text)}
-      end)
+    # The true center of the row lines up with the centered slide content,
+    # but only fits when the wider side (the hints) has room in its half.
+    # Narrower rows center the attribution in the gap between the two.
+    side = max(total_width(progress), total_width(hints))
 
-    rects = Layout.split(rect, :horizontal, constraints)
+    if rect.width >= 2 * side + width(attr) do
+      [left, center, right] =
+        Layout.split(rect, :horizontal, [{:fill, 1}, {:length, width(attr)}, {:fill, 1}])
+
+      lay_out(progress ++ [:flex], left) ++
+        build_segment({attr, center}) ++ lay_out([:flex | hints], right)
+    else
+      lay_out(progress ++ [:flex, attr, :flex] ++ hints, rect)
+    end
+  end
+
+  defp total_width(segments), do: segments |> Enum.map(&width/1) |> Enum.sum()
+
+  defp lay_out(segments, rect) do
+    rects = Layout.split(rect, :horizontal, Enum.map(segments, &constraint/1))
 
     segments
     |> Enum.zip(rects)
     |> Enum.flat_map(&build_segment/1)
   end
 
+  defp constraint(:flex), do: {:fill, 1}
+  defp constraint(segment), do: {:length, width(segment)}
+
+  defp width({:gap, n}), do: n
+  defp width({_kind, text}), do: String.length(text)
+
   defp build_segment({:flex, _rect}), do: []
   defp build_segment({{:gap, _n}, _rect}), do: []
 
-  defp build_segment({{:chip, text}, rect}),
+  defp build_segment({{kind, text}, rect}) when kind in [:chip, :hint],
     do: [{%Paragraph{text: text, style: chip_style()}, rect}]
-
-  defp build_segment({{:hint, text}, rect}),
-    do: [{%Paragraph{text: text, style: hint_style()}, rect}]
 
   # The attribution is one Line of two spans: a muted "built with " and
   # the library name in violet. The segment text is only used to size
@@ -133,11 +150,10 @@ defmodule SlidesTui.Chrome do
         Span.new("#{@attribution_name} ", style: attribution_name_style())
       ])
 
-    [{%Paragraph{text: line, alignment: :right}, rect}]
+    [{%Paragraph{text: line, alignment: :center}, rect}]
   end
 
-  defp chip_style, do: %Style{fg: :black, bg: @accent, modifiers: [:bold]}
-  defp hint_style, do: %Style{fg: :gray, bg: @hint_bg, modifiers: [:bold]}
+  defp chip_style, do: %Style{fg: :gray, bg: @chip_bg, modifiers: [:bold]}
   defp attribution_style, do: %Style{fg: :dark_gray, modifiers: [:italic]}
   defp attribution_name_style, do: %Style{fg: @violet, modifiers: [:italic]}
 end

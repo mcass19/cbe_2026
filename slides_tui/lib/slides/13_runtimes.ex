@@ -21,8 +21,8 @@ defmodule TuisEverywhere.Slides.Runtimes do
 
   def render(_state, area) do
     Ui.headline_with_bullets(area, "Shape of an app", [
-      "callback — GenServer-shaped: mount, render, handle_event",
-      "reducer — Elm-shaped: update(msg, state) + subscriptions",
+      "`callback` — GenServer-shaped: mount, render, handle_event",
+      "`reducer` — Elm-shaped: update(msg, state) + subscriptions",
       "commands and subscriptions keep side effects off the loop",
       "same widgets, same transports — pick per app",
       "this deck runs on the reducer runtime"

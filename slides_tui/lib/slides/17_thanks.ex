@@ -29,16 +29,19 @@ defmodule TuisEverywhere.Slides.Thanks do
   ]
 
   def render(_state, area) do
-    bundle = SlidesLayout.center(area, height: 4 + 2 + length(@links))
+    # "Questions?" under the banner, then the links in the deck's cyan:
+    # full strength rather than dim, since this is the slide people
+    # photograph and a projector washes dim text out.
+    lines =
+      [Line.new([Span.new("Questions?", style: %Style{modifiers: [:bold]})]), Line.new([])] ++
+        Enum.map(["" | @links], &Line.new([Span.new(&1, style: Ui.cyan_style())]))
+
+    bundle = SlidesLayout.center(area, height: 4 + 2 + length(lines))
 
     [banner, _gap, sub] =
       Layout.split(bundle, :vertical, [{:length, 4}, {:length, 2}, {:min, 0}])
 
-    links = %Paragraph{
-      text: Enum.join(@links, "\n"),
-      alignment: :center,
-      style: %Style{modifiers: [:dim]}
-    }
+    links = %Paragraph{text: lines, alignment: :center}
 
     # Bookend to the title slide: that one paints itself violet letter
     # by letter; this one is already fully painted, no animation.

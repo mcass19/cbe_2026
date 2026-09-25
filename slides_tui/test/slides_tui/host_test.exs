@@ -200,8 +200,8 @@ defmodule SlidesTui.HostTest do
       state = %{interactive_state() | notes_open?: true}
       widgets = Host.render(state, @frame)
 
-      # Clear, body Block, slide widget, 6 footer widgets (progress + 4
-      # hint chips + attribution), then 3 popup widgets = 12.
+      # Clear, body Block, slide widget, 6 footer widgets (progress,
+      # attribution, 4 hint chips), then 3 popup widgets = 12.
       assert length(widgets) == 12
 
       [
@@ -209,11 +209,11 @@ defmodule SlidesTui.HostTest do
         {%Block{border_type: :rounded}, _body},
         _slide,
         _progress,
+        _attribution,
         _hint1,
         _hint2,
         _hint3,
         _hint4,
-        _attribution,
         {%Clear{}, popup_rect},
         {%Block{title: " Notes "}, popup_rect2},
         {%ExRatatui.Widgets.Markdown{}, _inner_rect}
@@ -303,11 +303,11 @@ defmodule SlidesTui.HostTest do
                {%Block{title: nil, border_type: :rounded}, body_rect},
                {%Paragraph{text: "intro"}, inner_rect},
                {%Paragraph{text: progress_text}, _},
+               {%Paragraph{text: attr_text, alignment: :center}, _},
                {%Paragraph{}, _},
                {%Paragraph{}, _},
                {%Paragraph{}, _},
-               {%Paragraph{}, _},
-               {%Paragraph{text: attr_text, alignment: :right}, _}
+               {%Paragraph{}, _}
              ] = widgets
 
       assert clear_rect == %Rect{x: 0, y: 0, width: 80, height: 24}
@@ -330,7 +330,7 @@ defmodule SlidesTui.HostTest do
 
       assert body_rect == %Rect{x: 0, y: 0, width: 80, height: 23}
       assert inner_rect == %Rect{x: 1, y: 1, width: 78, height: 21}
-      # progress + 4 hint chips + attribution
+      # progress + attribution + 4 hint chips
       assert length(footer_widgets) == 6
     end
 

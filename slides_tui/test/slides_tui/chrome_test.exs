@@ -10,8 +10,8 @@ defmodule SlidesTui.ChromeTest do
   @frame %Rect{x: 0, y: 0, width: 80, height: 24}
   @footer_rect %Rect{x: 0, y: 23, width: 80, height: 1}
   @accent {:rgb, 225, 31, 193}
-  @chip_style %Style{fg: :black, bg: @accent, modifiers: [:bold]}
-  @hint_style %Style{fg: :gray, bg: {:rgb, 58, 62, 78}, modifiers: [:bold]}
+  @slate {:rgb, 58, 62, 78}
+  @chip_style %Style{fg: :gray, bg: @slate, modifiers: [:bold]}
   @violet {:rgb, 167, 139, 250}
   @attribution_style %Style{fg: :dark_gray, modifiers: [:italic]}
   @attribution_name_style %Style{fg: @violet, modifiers: [:italic]}
@@ -62,15 +62,14 @@ defmodule SlidesTui.ChromeTest do
       # 1 progress + 4 hint chips + 1 attribution = 6 widgets
       assert length(widgets) == 6
 
-      [progress | rest] = widgets
-      {hint_chips, [attribution]} = Enum.split(rest, 4)
+      [progress, attribution | hint_chips] = widgets
 
+      # footer chips are for the presenter, not the room: progress and
+      # hints share one muted gray-on-slate look
       assert {%Paragraph{text: " 1 / 12 ", style: @chip_style}, _} = progress
 
-      # key hints are for the presenter, not the room: muted so the
-      # magenta stays with the border and the progress chip only
       Enum.each(hint_chips, fn {widget, _rect} ->
-        assert %Paragraph{style: @hint_style} = widget
+        assert %Paragraph{style: @chip_style} = widget
       end)
 
       hint_texts = Enum.map(hint_chips, fn {%Paragraph{text: t}, _} -> t end)
@@ -92,7 +91,7 @@ defmodule SlidesTui.ChromeTest do
                      %Span{content: "ex_ratatui ", style: @attribution_name_style}
                    ]
                  },
-                 alignment: :right
+                 alignment: :center
                },
                _
              } = attribution
@@ -103,36 +102,55 @@ defmodule SlidesTui.ChromeTest do
       assert [{%Paragraph{text: " 5 / 5 "}, _} | _] = Chrome.footer(4, 5, @footer_rect)
     end
 
-    test "rects tile horizontally left-to-right and end flush with the right edge" do
-      [{_, p_rect} | rest] = Chrome.footer(0, 12, @footer_rect)
-      {hint_rects, [{_, attr_rect}]} = Enum.split(rest, 4)
+    test "progress on the left, attribution centered, hints flush right" do
+      # a projector-wide row: centering needs the hints to fit in the
+      # right half beside the attribution
+      wide = %Rect{x: 0, y: 23, width: 160, height: 1}
 
-      # progress sits one cell in from the left edge, so its filled
-      # background never touches the screen edge (the attribution on
-      # the right already keeps a cell of padding inside its text)
-      assert p_rect.x == @footer_rect.x + 1
+      [{_, p_rect}, {_, attr_rect} | hint_chips] = Chrome.footer(0, 12, wide)
+      hint_rects = Enum.map(hint_chips, fn {_, r} -> r end)
 
-      # hints come after the progress chip + flex gap, in order
-      assert p_rect.x + p_rect.width <= elem(hd(hint_rects), 1).x
+      # progress and the last hint each sit one cell in from their edge,
+      # so their filled backgrounds never touch the screen edge
+      assert p_rect.x == wide.x + 1
+      assert List.last(hint_rects).x + List.last(hint_rects).width == wide.x + wide.width - 1
+
+      # the attribution sits in the true center of the row
+      left_margin = attr_rect.x - wide.x
+      right_margin = wide.x + wide.width - (attr_rect.x + attr_rect.width)
+      assert abs(left_margin - right_margin) <= 1
+
+      # left to right: progress, attribution, hints
+      assert p_rect.x + p_rect.width <= attr_rect.x
+      assert attr_rect.x + attr_rect.width <= hd(hint_rects).x
 
       hint_rects
-      |> Enum.map(fn {_, r} -> r end)
       |> Enum.chunk_every(2, 1, :discard)
       |> Enum.each(fn [a, b] ->
         # consecutive hint chips leave a 1-cell gap between them
         assert b.x - (a.x + a.width) == 1
       end)
 
-      # attribution hugs the right edge of the footer
-      assert attr_rect.x + attr_rect.width == @footer_rect.x + @footer_rect.width
-
       # every segment lives on the footer row
-      all = [p_rect | Enum.map(hint_rects, fn {_, r} -> r end)] ++ [attr_rect]
-
-      Enum.each(all, fn r ->
-        assert r.y == @footer_rect.y
+      Enum.each([p_rect, attr_rect | hint_rects], fn r ->
+        assert r.y == wide.y
         assert r.height == 1
       end)
+    end
+
+    test "a row too narrow for the true center keeps every hint whole" do
+      # 80 cols can't fit the hints in the right half beside a centered
+      # attribution, so it centers in the gap between chip and hints
+      [{_, p_rect}, {_, attr_rect} | hint_chips] = Chrome.footer(0, 12, @footer_rect)
+
+      Enum.each(hint_chips, fn {%Paragraph{text: text}, r} ->
+        assert r.width == String.length(text)
+      end)
+
+      {_, first_hint} = hd(hint_chips)
+      gap_left = attr_rect.x - (p_rect.x + p_rect.width)
+      gap_right = first_hint.x - (attr_rect.x + attr_rect.width)
+      assert abs(gap_left - gap_right) <= 1
     end
 
     test "narrow rect still produces all six widgets" do
