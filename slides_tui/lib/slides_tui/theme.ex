@@ -13,7 +13,7 @@ defmodule SlidesTui.Theme do
     * `:text` — body text and headlines
     * `:subtle` — secondary text (subtitles, placeholder hints)
     * `:muted` — the quietest chrome (the footer's "built with", stars)
-    * `:accent` — Code BEAM magenta: the slide border, the 3D cube
+    * `:accent` — Code BEAM magenta: the slide border
     * `:violet` — in-slide accents: bullet markers, prompts, captions
     * `:cyan` — names to look up: packages, atoms, modules, links
     * `:chip_bg` / `:chip_fg` — footer chips and the notes popup
@@ -163,10 +163,6 @@ defmodule SlidesTui.Theme do
   @doc "The active theme for this process, or the default outside a host."
   @spec current() :: t()
   def current, do: Process.get(@key) || fetch!(@default)
-
-  @doc "A theme colour as a plain `{r, g, b}` tuple, for the 3D scene."
-  @spec rgb(rgb()) :: {0..255, 0..255, 0..255}
-  def rgb({:rgb, r, g, b}), do: {r, g, b}
 
   @doc """
   WCAG contrast ratio between two colours, from 1.0 (none) to 21.0.

@@ -4,7 +4,7 @@ defmodule TuisEverywhere.Slides.ThemedDeckTest do
   use ExUnit.Case, async: false
 
   alias ExRatatui.Layout.Rect
-  alias ExRatatui.Widgets.{Canvas, Viewport3D}
+  alias ExRatatui.Widgets.Canvas
   alias SlidesTui.{Deck, Theme}
 
   # The size the deck is built for (1080p at ~15pt), inside the border.
@@ -31,7 +31,7 @@ defmodule TuisEverywhere.Slides.ThemedDeckTest do
       end
     end
 
-    test "canvases and the 3D scene sit on #{name}'s ground" do
+    test "canvases sit on #{name}'s ground" do
       :ok = Theme.put(unquote(name))
       theme = Theme.current()
 
@@ -40,9 +40,6 @@ defmodule TuisEverywhere.Slides.ThemedDeckTest do
       canvases = for {%Canvas{} = canvas, _} <- widgets, do: canvas
       assert canvases != []
       assert Enum.all?(canvases, &(&1.background_color == theme.ground))
-
-      [viewport] = for {%Viewport3D{} = viewport, _} <- widgets, do: viewport
-      assert viewport.scene.background == Theme.rgb(theme.ground)
     end
   end
 end

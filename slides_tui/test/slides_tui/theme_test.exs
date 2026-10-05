@@ -39,10 +39,6 @@ defmodule SlidesTui.ThemeTest do
     end
   end
 
-  test "rgb/1 unwraps a colour for the 3D scene" do
-    assert Theme.rgb({:rgb, 1, 2, 3}) == {1, 2, 3}
-  end
-
   describe "contrast/2" do
     test "spans 1.0 for identical colours to 21.0 for black on white" do
       black = {:rgb, 0, 0, 0}

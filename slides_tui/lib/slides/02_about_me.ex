@@ -12,7 +12,10 @@ defmodule TuisEverywhere.Slides.AboutMe do
 
   def notes do
     """
-    Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since 1966, when designers at Letraset and James Mosley, the librarian at St Bride Printing Library in London, took a 1914 Cicero translation and scrambled it to make dummy text for Letraset's Body Type sheets. It has survived not only many decades, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised thanks to these sheets and more recently with desktop publishing software like Aldus PageMaker and Microsoft Word including versions of Lorem Ipsum.
+    - mauricio "mauri" cassola, software engineer from uruguay
+    - netherlands, almost 4 years
+    - the picture i use everywhere, mcass19 handle for all the links
+    - elixir for many years, from different angles, day to day now
     """
   end
 
@@ -43,10 +46,9 @@ defmodule TuisEverywhere.Slides.AboutMe do
       Line.new([]),
       Line.new([Span.new("$ cat links.txt", style: prompt)]),
       Line.new([]),
+      Line.new([Span.new("@mcass19")]),
       Line.new([Span.new("mcass19.dev")]),
-      Line.new([Span.new("mauricass19@gmail.com")]),
-      Line.new([Span.new("github.com/mcass19")]),
-      Line.new([Span.new("linkedin.com/in/mauricio-cassola")])
+      Line.new([Span.new("hi@mcass19.dev")])
     ]
   end
 end

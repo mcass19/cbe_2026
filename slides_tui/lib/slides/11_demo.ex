@@ -55,7 +55,8 @@ defmodule TuisEverywhere.Slides.Demo do
 
   def notes do
     """
-    Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since 1966, when designers at Letraset and James Mosley, the librarian at St Bride Printing Library in London, took a 1914 Cicero translation and scrambled it to make dummy text for Letraset's Body Type sheets. It has survived not only many decades, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised thanks to these sheets and more recently with desktop publishing software like Aldus PageMaker and Microsoft Word including versions of Lorem Ipsum.
+    - goatmire badge, credit Lars Wikman for Goatmire. credit Gus Workman for badge. nerves, 400x300 e-ink, 1 bit, two buttons
+    - fairphone 3. credit Marc Lainez. Nerves everywhere. Framebuffer.
     """
   end
 

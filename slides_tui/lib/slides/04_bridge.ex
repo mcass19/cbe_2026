@@ -43,7 +43,15 @@ defmodule TuisEverywhere.Slides.Bridge do
 
   def notes do
     """
-    Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since 1966, when designers at Letraset and James Mosley, the librarian at St Bride Printing Library in London, took a 1914 Cicero translation and scrambled it to make dummy text for Letraset's Body Type sheets. It has survived not only many decades, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised thanks to these sheets and more recently with desktop publishing software like Aldus PageMaker and Microsoft Word including versions of Lorem Ipsum.
+    - the bridge: rustler, what makes the talk possible
+    - a widget is a struct. no process, no state. paragraph, gauge, table, same shape
+    - render/2 -> list of {widget, rect} -> plain maps -> one nif call per frame, not per widget
+    - rust side decodes into ratatui types, ratatui does layout, diffing, painting. elixir never does cell math
+    - input the other way: poll on a dirty io scheduler, keys arrive as messages
+    - terminal lives in a ResourceArc: dies with the process, restores the tty on gc
+    - rustler_precompiled: mix deps.get, no cargo anywhere
+    - the nif loads lazily on first use: depending on the library never pulls rust into the compiler vm
+    - safety: a rust panic is an elixir exception in the calling process, not a vm death. zero unsafe blocks in the crate, the risk lives in the deps (ratatui, crossterm, image decoders)
     """
   end
 

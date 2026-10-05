@@ -21,7 +21,11 @@ defmodule TuisEverywhere.Slides.Raster do
 
   def notes do
     """
-    Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since 1966, when designers at Letraset and James Mosley, the librarian at St Bride Printing Library in London, took a 1914 Cicero translation and scrambled it to make dummy text for Letraset's Body Type sheets. It has survived not only many decades, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised thanks to these sheets and more recently with desktop publishing software like Aldus PageMaker and Microsoft Word including versions of Lorem Ipsum.
+    - last clothes for a cell session: a panel that only knows pixels. no terminal, no browser, no bytes at all
+    - ex_ratatui stops at cells, it does not drive panels and it should not. raster_ex_ratatui is the layer in between
+    - any panel is one module: init/1 opens the device and says how big it is and how pixels are packed, push/2 writes rectangles. the library starts the app, folds every diff, rasterises, pushes at the pace the panel tolerates, forwards input, restarts the app when it quits
+    - a linux framebuffer is one line: `use RasterExRatatui.Framebuffer.Surface, app: MyApp, rotate: 90`
+    - the photo: pi 4 on the touch display 2
     """
   end
 

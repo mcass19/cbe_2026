@@ -28,7 +28,7 @@ The same `LobbyTui.Theatre` the browser, the terminal, and SSH run — rendered 
 
 ```elixir
 Kino.ExRatatui.new(LobbyTui.Notebook,
-  nickname: "speaker",
+  nickname: "stage_kino",
   avatar: "monk",
   height: "640px"
 )

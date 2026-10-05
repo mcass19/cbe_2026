@@ -8,7 +8,13 @@ defmodule TuisEverywhere.Slides.CellSession do
 
   def notes do
     """
-    Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since 1966, when designers at Letraset and James Mosley, the librarian at St Bride Printing Library in London, took a 1914 Cicero translation and scrambled it to make dummy text for Letraset's Body Type sheets. It has survived not only many decades, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised thanks to these sheets and more recently with desktop publishing software like Aldus PageMaker and Microsoft Word including versions of Lorem Ipsum.
+    - livebook still spoke terminal. now drop it completely: what if there are no bytes at all
+    - ratatui draws into an off-screen buffer. no escape codes, no emulator. same draw, same feed_input, same lifecycle as the byte session, just cells out instead of ansi
+    - a cell: char, fg, bg, modifiers, and a skip flag. skip is how Popup does transparency. :reset means "whatever the consumer's default is"
+    - events back in as %Event.Key{} structs. a badge button is a key press, a browser keydown is a key press
+    - pixel regions: give the session a cell size in pixels -> Viewport3D + Image arrive as real bitmaps, regions, next to the cells
+    - same buffer is the test story: assert on cells, never on escapes
+    - this makes "everywhere" honest. next two: cell sessions in different clothes, both built on this and on the regions
     """
   end
 

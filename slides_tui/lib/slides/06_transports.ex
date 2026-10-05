@@ -8,7 +8,13 @@ defmodule TuisEverywhere.Slides.Transports do
 
   def notes do
     """
-    Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since 1966, when designers at Letraset and James Mosley, the librarian at St Bride Printing Library in London, took a 1914 Cicero translation and scrambled it to make dummy text for Letraset's Body Type sheets. It has survived not only many decades, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised thanks to these sheets and more recently with desktop publishing software like Aldus PageMaker and Microsoft Word including versions of Lorem Ipsum.
+    - two questions: where do the bytes go, where do the events come from. ratatui paints cells, the terminal side turns them into ansi bytes. answer those two and the app runs anywhere
+    - :local, what we had so far. crossterm owns the tty
+    - :ssh, the node IS the ssh server. otp's own daemon: passwords, keys, or a pwdfun callback, no sshd. every connection gets its own server + its own in-memory terminal, nothing shared. dashboards on servers, admin consoles, wargames
+    - :distributed, app on a node with no terminal, attach from the laptop. plain terms, no serialization. the app node never loads the nif. trust model is the cookie. observer energy
+    - nerves, the three meet: pi on hdmi = :local, nerves_ssh subsystem = ssh -t in, attach over dist to a device that never compiled rust.
+    - contract is small -> custom transports. the guide has a working tcp one in ~95 lines
+    - punchline: the app module does not change. transport is an option, not an architecture
     """
   end
 

@@ -19,7 +19,10 @@ defmodule TuisEverywhere.Slides.Lobby do
 
   def notes do
     """
-    Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since 1966, when designers at Letraset and James Mosley, the librarian at St Bride Printing Library in London, took a 1914 Cicero translation and scrambled it to make dummy text for Letraset's Body Type sheets. It has survived not only many decades, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised thanks to these sheets and more recently with desktop publishing software like Aldus PageMaker and Microsoft Word including versions of Lorem Ipsum.
+    - phones out, url + qr on screen, or ssh from your laptops
+    - lobby_tui: the theatre from the interstitial, for real. a small pixel-art room, seats in front, a stage behind curtains
+    - what everybody is about to do: pick a nick and an avatar, walk in with the arrows, grab a seat. seated -> post, it lands on the stage feed, everyone sees it
+    - all in memory: ash on ets, presence for who is where, pubsub for the feed. leave -> gone, restart -> wiped. no personal info please
     """
   end
 
