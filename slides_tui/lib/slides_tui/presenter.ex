@@ -17,6 +17,8 @@ defmodule SlidesTui.Presenter do
 
     * `←` / `h` / `page up` — prev slide
     * `→` / `l` / `space` / `page down` — next slide
+    * `↑` / `k` and `↓` / `j` — scroll the notes; a new slide starts
+      at the top
     * `s` — restart the talk timer from zero
     * `q` — close this view (the deck keeps running)
 
@@ -32,7 +34,7 @@ defmodule SlidesTui.Presenter do
 
   use ExRatatui.App, runtime: :reducer
 
-  alias ExRatatui.Event.Key
+  alias ExRatatui.Event.{Key, Resize}
   alias ExRatatui.Frame
   alias ExRatatui.Layout.Rect
   alias ExRatatui.Style
@@ -46,9 +48,9 @@ defmodule SlidesTui.Presenter do
   @next_keys ["right", "l", " ", "page_down"]
   @prev_keys ["left", "h", "page_up"]
   @warn_ms 5 * 60_000
-  @hints " ←/→ slides · s restart timer · q close "
+  @hints " ←/→ slides · ↑/↓ scroll · s restart timer · q close "
 
-  defstruct host: nil, view: nil, now: 0, clock: {0, 0}
+  defstruct host: nil, view: nil, now: 0, clock: {0, 0}, scroll: 0, size: {80, 24}
 
   @type view :: %{
           index: non_neg_integer(),
@@ -65,7 +67,9 @@ defmodule SlidesTui.Presenter do
           host: pid() | nil,
           view: view() | :stopped | nil,
           now: integer(),
-          clock: {0..23, 0..59}
+          clock: {0..23, 0..59},
+          scroll: non_neg_integer(),
+          size: {non_neg_integer(), non_neg_integer()}
         }
 
   @doc """
@@ -93,7 +97,11 @@ defmodule SlidesTui.Presenter do
 
   @impl true
   def init(opts) do
-    state = %__MODULE__{host: Keyword.get_lazy(opts, :host, &find_host/0)}
+    state = %__MODULE__{
+      host: Keyword.get_lazy(opts, :host, &find_host/0),
+      size: {Keyword.get(opts, :width, 80), Keyword.get(opts, :height, 24)}
+    }
+
     {:ok, state |> tick() |> follow()}
   end
 
@@ -114,8 +122,13 @@ defmodule SlidesTui.Presenter do
   end
 
   @impl true
-  def update({:info, {:slides_tui, :view, view}}, state),
-    do: {:noreply, %{state | view: view}}
+  def update({:info, {:slides_tui, :view, view}}, state) do
+    scroll = if same_slide?(state.view, view), do: state.scroll, else: 0
+    {:noreply, clamp_scroll(%{state | view: view, scroll: scroll})}
+  end
+
+  def update({:event, %Resize{width: w, height: h}}, state),
+    do: {:noreply, clamp_scroll(%{state | size: {w, h}})}
 
   def update({:info, :tick}, state), do: {:noreply, tick(state)}
 
@@ -130,10 +143,41 @@ defmodule SlidesTui.Presenter do
   def update({:event, %Key{code: code, kind: "press"}}, state) when code in @prev_keys,
     do: tell_host(state, :prev)
 
+  def update({:event, %Key{code: code, kind: "press"}}, state) when code in ["down", "j"],
+    do: {:noreply, clamp_scroll(%{state | scroll: state.scroll + 1})}
+
+  def update({:event, %Key{code: code, kind: "press"}}, state) when code in ["up", "k"],
+    do: {:noreply, clamp_scroll(%{state | scroll: state.scroll - 1})}
+
   def update({:event, %Key{code: "s", kind: "press"}}, state),
     do: tell_host(state, :restart_timer)
 
   def update(_msg, state), do: {:noreply, state}
+
+  defp same_slide?(%{index: index}, %{index: index}), do: true
+  defp same_slide?(_old, _new), do: false
+
+  defp clamp_scroll(state),
+    do: %{state | scroll: state.scroll |> min(max_scroll(state)) |> max(0)}
+
+  # How far the notes scroll before their last line is on screen. The
+  # Markdown widget wraps in Rust, so the height is an estimate: each
+  # line wraps at a few cells short of the inner width, which errs on
+  # the side of reaching the end. The frame takes 2 columns of border
+  # and 4 of padding, 3 rows of border and padding.
+  defp max_scroll(%__MODULE__{view: %{notes: notes}, size: {w, h}}) when is_binary(notes) do
+    width = max(w - 6 - 4, 1)
+
+    rows =
+      notes
+      |> String.split("\n")
+      |> Enum.map(&max(1, ceil(String.length(&1) / width)))
+      |> Enum.sum()
+
+    max(rows - (h - 3), 0)
+  end
+
+  defp max_scroll(_state), do: 0
 
   defp tell_host(%__MODULE__{view: :stopped} = state, _msg), do: {:noreply, state}
 
@@ -156,19 +200,23 @@ defmodule SlidesTui.Presenter do
     area = %Rect{x: 0, y: 0, width: w, height: h}
     ground = %Block{style: %Style{fg: theme.text, bg: theme.ground}}
 
-    [{%Clear{}, area}, {ground, area}, {body(view, frame_block(state, theme), theme), area}]
+    [{%Clear{}, area}, {ground, area}, {body(state, frame_block(state, theme), theme), area}]
   end
 
   defp theme_name(%{theme: theme}), do: theme
   defp theme_name(_waiting_or_stopped), do: Theme.default()
 
-  defp body(nil, block, theme), do: message("waiting for the deck…", block, theme)
+  defp body(%__MODULE__{view: nil}, block, theme),
+    do: message("waiting for the deck…", block, theme)
 
-  defp body(:stopped, block, theme),
+  defp body(%__MODULE__{view: :stopped}, block, theme),
     do: message("the deck isn't running · q closes this view", block, theme)
 
-  defp body(%{notes: nil}, block, theme), do: message("no notes for this slide", block, theme)
-  defp body(%{notes: notes}, block, _theme), do: %Markdown{content: notes, block: block}
+  defp body(%__MODULE__{view: %{notes: nil}}, block, theme),
+    do: message("no notes for this slide", block, theme)
+
+  defp body(%__MODULE__{view: %{notes: notes}, scroll: scroll}, block, _theme),
+    do: %Markdown{content: notes, block: block, scroll: {scroll, 0}}
 
   defp message(text, block, theme),
     do: %Paragraph{
@@ -188,6 +236,7 @@ defmodule SlidesTui.Presenter do
       titles: [
         %Title{content: Line.new([timer(state, theme), clock(state, theme)]), alignment: :right},
         %Title{content: next_title(view, theme), position: :bottom},
+        %Title{content: more(state, theme), position: :bottom, alignment: :center},
         %Title{
           content: Span.new(@hints, style: %Style{fg: theme.muted}),
           position: :bottom,
@@ -195,6 +244,16 @@ defmodule SlidesTui.Presenter do
         }
       ]
     }
+  end
+
+  # Long notes say so on the bottom border while there's more below.
+  defp more(state, theme) do
+    if state.scroll < max_scroll(state),
+      do:
+        Span.new(" ↓ more ",
+          style: %Style{fg: theme.ground, bg: theme.violet, modifiers: [:bold]}
+        ),
+      else: ""
   end
 
   defp slide_title(%{total: total} = view, theme) when total > 0 do

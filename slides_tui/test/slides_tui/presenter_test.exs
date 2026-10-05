@@ -125,7 +125,8 @@ defmodule SlidesTui.PresenterTest do
                " 5 / 17  Raster ",
                " --:--  09:05 ",
                " next → Lobby ",
-               " ←/→ slides · s restart timer · q close "
+               "",
+               " ←/→ slides · ↑/↓ scroll · s restart timer · q close "
              ]
     end
 
@@ -169,18 +170,83 @@ defmodule SlidesTui.PresenterTest do
       {body, block} = frame_block(state)
 
       assert %Paragraph{text: "no notes for this slide"} = body
-      assert [" 17 / 17 ", _, " last slide ", _] = titles(block)
+      assert [" 17 / 17 ", _, " last slide ", "", _] = titles(block)
     end
 
     test "waiting for the first view, a stopped deck, and an empty one" do
       assert {%Paragraph{text: "waiting for the deck…"}, block} = frame_block(presenter())
-      assert [" presenter ", _, "", _] = titles(block)
+      assert [" presenter ", _, "", "", _] = titles(block)
 
       assert {%Paragraph{text: "the deck isn't running" <> _}, _} =
                frame_block(presenter(:stopped))
 
       empty = view(total: 0, index: 0, title: nil, notes: nil, next_title: nil)
       assert {%Paragraph{text: "no notes for this slide"}, _} = frame_block(presenter(empty))
+    end
+  end
+
+  describe "scrolling" do
+    # 80×24 leaves 21 rows of notes; 40 one-line bullets leave 19 to scroll.
+    @long_notes Enum.map_join(1..40, "\n", &"- line #{&1}")
+
+    test "↓/j and ↑/k scroll the notes within their length" do
+      state = presenter(view(notes: @long_notes))
+
+      {:noreply, state} = Presenter.update({:event, key("down")}, state)
+      {:noreply, state} = Presenter.update({:event, key("j")}, state)
+      assert state.scroll == 2
+
+      {:noreply, state} = Presenter.update({:event, key("k")}, state)
+      {:noreply, state} = Presenter.update({:event, key("up")}, state)
+      {:noreply, state} = Presenter.update({:event, key("up")}, state)
+      assert state.scroll == 0
+
+      state =
+        Enum.reduce(1..30, state, fn _, acc ->
+          elem(Presenter.update({:event, key("j")}, acc), 1)
+        end)
+
+      assert state.scroll == 19
+    end
+
+    test "short notes don't scroll" do
+      {:noreply, state} = Presenter.update({:event, key("down")}, presenter(view()))
+      assert state.scroll == 0
+    end
+
+    test "a new slide starts at the top, a refresh of the same one keeps the place" do
+      state = %{presenter(view(notes: @long_notes)) | scroll: 5}
+
+      {:noreply, state} =
+        Presenter.update(
+          {:info, {:slides_tui, :view, view(notes: @long_notes, theme: :midnight)}},
+          state
+        )
+
+      assert state.scroll == 5
+
+      {:noreply, state} =
+        Presenter.update({:info, {:slides_tui, :view, view(index: 5, notes: @long_notes)}}, state)
+
+      assert state.scroll == 0
+    end
+
+    test "a taller window clamps the scroll back" do
+      state = %{presenter(view(notes: @long_notes)) | scroll: 19}
+
+      {:noreply, state} =
+        Presenter.update({:event, %ExRatatui.Event.Resize{width: 80, height: 40}}, state)
+
+      assert {state.size, state.scroll} == {{80, 40}, 3}
+    end
+
+    test "the notes render scrolled, with a marker while there's more below" do
+      state = %{presenter(view(notes: @long_notes)) | scroll: 3}
+      {%Markdown{scroll: {3, 0}}, block} = frame_block(state)
+      assert " ↓ more " in titles(block)
+
+      {_body, block} = frame_block(%{state | scroll: 19})
+      refute " ↓ more " in titles(block)
     end
   end
 
