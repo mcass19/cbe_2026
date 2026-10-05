@@ -57,6 +57,32 @@ defmodule SlidesTuiTest do
     assert_receive {:DOWN, ^ref, :process, ^runner, :normal}, 2_000
   end
 
+  test "run/1 serves the presenter view while the deck runs" do
+    parent = self()
+    name = :"slides_tui_presenter_run_test_#{System.unique_integer([:positive])}"
+
+    spawn_link(fn ->
+      result =
+        SlidesTui.run(
+          name: name,
+          test_mode: {80, 24},
+          presenter_port: 0,
+          pattern: "test/support/fixtures/deck_basic/*.ex"
+        )
+
+      send(parent, {:run_returned, result})
+    end)
+
+    # run/1 starts the daemon before the host and stops it on the way
+    # out; returning :ok means both went through
+    pid = wait_until_registered(name)
+
+    :ok =
+      ExRatatui.Runtime.inject_event(pid, %ExRatatui.Event.Key{code: "q", kind: "press"})
+
+    assert_receive {:run_returned, :ok}, 2_000
+  end
+
   defp wait_until_registered(name) do
     Enum.find_value(1..100, fn _ ->
       case Process.whereis(name) do

@@ -75,8 +75,8 @@ defmodule SlidesTui.ChromeTest do
     test "returns one progress chip, one chip per hint, and an attribution" do
       widgets = Chrome.footer(0, 12, @footer_rect)
 
-      # 1 progress + 5 hint chips + 1 attribution = 7 widgets
-      assert length(widgets) == 7
+      # 1 progress + 4 hint chips + 1 attribution = 6 widgets
+      assert length(widgets) == 6
 
       [progress, attribution | hint_chips] = widgets
 
@@ -93,7 +93,6 @@ defmodule SlidesTui.ChromeTest do
       assert hint_texts == [
                " ←/h prev ",
                " →/l next ",
-               " n notes ",
                " t theme ",
                " q quit "
              ]
@@ -171,9 +170,9 @@ defmodule SlidesTui.ChromeTest do
       assert abs(gap_left - gap_right) <= 1
     end
 
-    test "narrow rect still produces all seven widgets" do
+    test "narrow rect still produces all six widgets" do
       narrow = %Rect{x: 0, y: 0, width: 60, height: 1}
-      assert length(Chrome.footer(0, 5, narrow)) == 7
+      assert length(Chrome.footer(0, 5, narrow)) == 6
     end
   end
 end

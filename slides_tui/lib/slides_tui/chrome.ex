@@ -26,7 +26,7 @@ defmodule SlidesTui.Chrome do
   # and the key hints share one muted look (the theme's chip colours),
   # so none of them pulls the eye off the slide. The accent stays on
   # the border.
-  @hints ["←/h prev", "→/l next", "n notes", "t theme", "q quit"]
+  @hints ["←/h prev", "→/l next", "t theme", "q quit"]
   @attribution_prefix "built with "
   @attribution_name "ex_ratatui"
 

@@ -1,5 +1,5 @@
 defmodule SlidesTui.Test.Fixtures.DeckInteractive.Static do
-  @moduledoc "Static slide with speaker notes — exercises the notes popup."
+  @moduledoc "Static slide with speaker notes — exercises the presenter view."
   use SlidesTui.Slide
 
   alias ExRatatui.Widgets.Paragraph

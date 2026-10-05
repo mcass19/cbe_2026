@@ -13,11 +13,17 @@ defmodule SlidesTui.Host do
       last slide). Page up/down and space are what presentation
       clickers emit, so the deck advances from a clicker untouched.
     * `q` — stop the deck
-    * `n` — toggle notes popup (no-op when slide's `notes/0` is nil)
     * `t` — cycle the colour theme (see `SlidesTui.Theme`)
     * anything else — delegated to the active slide's
       `handle_event/2` (terminal events) or `handle_info/2` (info
       messages); a `{:stop, _}` from the slide stops the whole deck
+
+  Speaker notes live in a separate presenter view (`SlidesTui.Presenter`),
+  served over SSH so it can sit on another screen. The host pushes it a
+  fresh view on every slide change and takes `{:slides_tui, :next}`,
+  `{:slides_tui, :prev}`, `{:slides_tui, :restart_timer}` and
+  `{:slides_tui, :sync}` messages back. The talk timer starts with the
+  deck; the presenter view restarts it.
 
   Per-slide state is preserved across navigations. The active slide's
   `subscriptions/1` is exposed to the runtime, which arms them on
@@ -32,6 +38,8 @@ defmodule SlidesTui.Host do
     * `:min_size` — `{cols, rows}` the deck needs. Below it the host
       shows a "terminal too small" screen with the numbers instead of
       silently clipping slides. Defaults to `{0, 0}` (no guard).
+    * `:talk_minutes` — the talk's length, shown next to the timer in
+      the presenter view. Defaults to `nil` (plain elapsed clock).
 
   Plus every option recognised by `ExRatatui.App`
   (`:transport`, `:name`, `:test_mode`, `:poll_interval`, …). The full
@@ -54,7 +62,11 @@ defmodule SlidesTui.Host do
   alias ExRatatui.Layout.Rect
   alias ExRatatui.Style
   alias ExRatatui.Widgets.{Block, Clear, Paragraph}
-  alias SlidesTui.{Chrome, Deck, NotesPopup, PlaceholderSlide, State, Theme}
+  alias SlidesTui.{Chrome, Deck, PlaceholderSlide, State, Theme}
+
+  # Page up/down and space are what presentation clickers emit.
+  @next_keys ["right", "l", " ", "page_down"]
+  @prev_keys ["left", "h", "page_up"]
 
   @impl true
   def init(opts) do
@@ -65,8 +77,13 @@ defmodule SlidesTui.Host do
         slides: slides,
         theme: Theme.fetch!(Keyword.get(opts, :theme, Theme.default())).name,
         min_size: Keyword.get(opts, :min_size, {0, 0}),
+        talk_minutes: Keyword.get(opts, :talk_minutes),
+        timer_started_at: now(),
         opts: opts
       })
+
+    # The presenter view finds the deck through this entry.
+    {:ok, _} = Registry.register(SlidesTui.Registry, :host, nil)
 
     # Ask the runtime to probe the local terminal once and cache the best
     # image protocol (Kitty / Sixel / iTerm2 / Halfblocks) on the
@@ -76,47 +93,99 @@ defmodule SlidesTui.Host do
     {:ok, state, probe_image_protocol: true}
   end
 
+  # Every transition that changes what the presenter view shows (slide,
+  # theme, timer) pushes the new view to the presenter sessions following
+  # this host. A sync request always pushes, so a fresh session catches up.
   @impl true
-  def update({:event, %Key{code: "q", kind: "press"}}, state),
+  def update({:info, {:slides_tui, :sync}}, %State{} = state) do
+    :ok = broadcast(state)
+    {:noreply, state}
+  end
+
+  def update(msg, %State{} = state) do
+    {_, new_state} = result = step(msg, state)
+    if presenter_view(new_state) != presenter_view(state), do: broadcast(new_state)
+    result
+  end
+
+  defp step({:event, %Key{code: "q", kind: "press"}}, state),
     do: {:stop, state}
 
-  def update({:event, %Key{code: code, kind: "press"}}, %State{slides: slides, index: i} = state)
-      when code in ["right", "l", " ", "page_down"] do
-    last = length(slides) - 1
-    {:noreply, %{state | index: max(0, min(i + 1, last))} |> mount_if_needed()}
-  end
+  defp step({:event, %Key{code: code, kind: "press"}}, state) when code in @next_keys,
+    do: {:noreply, next(state)}
 
-  def update({:event, %Key{code: code, kind: "press"}}, %State{index: i} = state)
-      when code in ["left", "h", "page_up"] do
-    {:noreply, %{state | index: max(i - 1, 0)} |> mount_if_needed()}
-  end
+  defp step({:event, %Key{code: code, kind: "press"}}, state) when code in @prev_keys,
+    do: {:noreply, prev(state)}
 
-  def update({:event, %Key{code: "n", kind: "press"}}, %State{slides: [_ | _]} = state) do
-    active = Enum.at(state.slides, state.index)
-
-    case active.notes() do
-      nil -> {:noreply, state}
-      _ -> {:noreply, %{state | notes_open?: not state.notes_open?}}
-    end
-  end
-
-  def update({:event, %Key{code: "t", kind: "press"}}, %State{theme: theme} = state),
+  defp step({:event, %Key{code: "t", kind: "press"}}, %State{theme: theme} = state),
     do: {:noreply, %{state | theme: Theme.next(theme)}}
 
-  def update({:event, _event}, %State{slides: []} = state),
+  defp step({:info, {:slides_tui, :next}}, state), do: {:noreply, next(state)}
+  defp step({:info, {:slides_tui, :prev}}, state), do: {:noreply, prev(state)}
+
+  defp step({:info, {:slides_tui, :restart_timer}}, state),
+    do: {:noreply, %{state | timer_started_at: now()}}
+
+  defp step({:event, _event}, %State{slides: []} = state),
     do: {:noreply, state}
 
-  def update({:info, _msg}, %State{slides: []} = state),
+  defp step({:info, _msg}, %State{slides: []} = state),
     do: {:noreply, state}
 
-  def update({:event, event}, %State{} = state),
+  defp step({:event, event}, state),
     do: dispatch(state, :handle_event, event)
 
-  def update({:info, msg}, %State{} = state),
+  defp step({:info, msg}, state),
     do: dispatch(state, :handle_info, msg)
 
-  def update(_msg, state),
+  defp step(_msg, state),
     do: {:noreply, state}
+
+  defp next(%State{slides: slides, index: i} = state),
+    do: go_to(state, max(0, min(i + 1, length(slides) - 1)))
+
+  defp prev(%State{index: i} = state), do: go_to(state, max(i - 1, 0))
+
+  defp go_to(%State{} = state, index), do: mount_if_needed(%{state | index: index})
+
+  defp now, do: System.monotonic_time(:millisecond)
+
+  defp broadcast(%State{} = state) do
+    view = presenter_view(state)
+
+    Registry.dispatch(SlidesTui.Registry, {:presenter, self()}, fn entries ->
+      for {pid, _} <- entries, do: send(pid, {:slides_tui, :view, view})
+    end)
+  end
+
+  defp presenter_view(%State{slides: []} = state) do
+    %{
+      index: 0,
+      total: 0,
+      title: nil,
+      notes: nil,
+      next_title: nil,
+      theme: state.theme,
+      timer_started_at: state.timer_started_at,
+      talk_minutes: state.talk_minutes
+    }
+  end
+
+  defp presenter_view(%State{slides: slides, index: index} = state) do
+    active = Enum.at(slides, index)
+    upcoming = Enum.at(slides, index + 1)
+
+    %{
+      index: index,
+      total: length(slides),
+      title: active.title(),
+      notes: active.notes(),
+      next_title: upcoming && (upcoming.title() || "untitled"),
+      theme: state.theme,
+      timer_started_at: state.timer_started_at,
+      talk_minutes: state.talk_minutes
+    }
+  end
 
   @impl true
   def subscriptions(%State{slides: []}), do: []
@@ -148,34 +217,16 @@ defmodule SlidesTui.Host do
        when w < min_w or h < min_h,
        do: too_small(area, {min_w, min_h}, theme)
 
-  defp render_frame(
-         %State{
-           slides: slides,
-           index: index,
-           slide_states: states,
-           notes_open?: notes_open?
-         },
-         area,
-         theme
-       ) do
+  defp render_frame(%State{slides: slides, index: index, slide_states: states}, area, theme) do
     active = Enum.at(slides, index)
-    title = active.title()
-    notes = active.notes()
 
     %{body: body_rect, inner: inner_rect, footer: footer_rect} = Chrome.layout(area)
 
     slide_widgets = active.render(Map.get(states, index), inner_rect)
 
-    popup_widgets =
-      if notes_open? and not is_nil(notes) do
-        NotesPopup.overlay(notes, area, theme)
-      else
-        []
-      end
-
     [
-      {Chrome.body_block(title, theme), body_rect}
-      | slide_widgets ++ Chrome.footer(index, length(slides), footer_rect, theme) ++ popup_widgets
+      {Chrome.body_block(active.title(), theme), body_rect}
+      | slide_widgets ++ Chrome.footer(index, length(slides), footer_rect, theme)
     ]
   end
 

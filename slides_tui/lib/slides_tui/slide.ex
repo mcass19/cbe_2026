@@ -27,7 +27,7 @@ defmodule SlidesTui.Slide do
       navigate-away. Default: `[]`.
     * `title/0` — string for the chrome header, or `nil` to skip
       the header row. Default: `nil`.
-    * `notes/0` — markdown for the toggleable notes popup, or
+    * `notes/0` — markdown for the presenter view's notes, or
       `nil`. Default: `nil`.
 
   ## Example

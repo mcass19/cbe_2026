@@ -229,77 +229,73 @@ defmodule SlidesTui.HostTest do
     end
   end
 
-  describe "n notes toggle" do
-    test "press n toggles notes_open? when the active slide has notes" do
-      state = interactive_state()
-      assert state.notes_open? == false
-
-      {:noreply, state} = Host.update({:event, key("n")}, state)
-      assert state.notes_open? == true
-
-      {:noreply, state} = Host.update({:event, key("n")}, state)
-      assert state.notes_open? == false
+  describe "presenter protocol" do
+    # Host.update/2 runs in the test process here, so the test plays the
+    # presenter session following "its" host.
+    setup do
+      {:ok, _} = Registry.register(SlidesTui.Registry, {:presenter, self()}, nil)
+      :ok
     end
 
-    test "press n is a no-op when the active slide's notes/0 returns nil" do
-      state = interactive_state()
-      # navigate to Counter (no notes)
-      {:noreply, state} = Host.update({:event, key("right")}, state)
-
-      {:noreply, new_state} = Host.update({:event, key("n")}, state)
-      assert new_state == state
+    test "init registers the host and takes :talk_minutes" do
+      {:ok, state, _} = Host.init(pattern: @basic_pattern, talk_minutes: 40)
+      assert state.talk_minutes == 40
+      assert {self(), nil} in Registry.lookup(SlidesTui.Registry, :host)
     end
 
-    test "press n on an empty deck is ignored" do
-      state = %State{slides: [], index: 0}
-      assert {:noreply, ^state} = Host.update({:event, key("n")}, state)
-    end
-  end
+    test "next and prev messages navigate like the keys" do
+      assert {:noreply, %State{index: 1}} =
+               Host.update({:info, {:slides_tui, :next}}, basic_state(0))
 
-  describe "render with notes popup" do
-    test "popup widgets appended after chrome + slide + footer" do
-      state = %{interactive_state() | notes_open?: true}
-      widgets = Host.render(state, @frame)
-
-      # Clear, ground Block, body Block, slide widget, 7 footer widgets
-      # (progress, attribution, 5 hint chips), then 3 popup widgets = 14.
-      assert length(widgets) == 14
-
-      [
-        {%Clear{}, _full_frame},
-        {%Block{borders: []}, _ground},
-        {%Block{border_type: :rounded}, _body},
-        _slide,
-        _progress,
-        _attribution,
-        _hint1,
-        _hint2,
-        _hint3,
-        _hint4,
-        _hint5,
-        {%Clear{}, popup_rect},
-        {%Block{title: " Notes "}, popup_rect2},
-        {%ExRatatui.Widgets.Markdown{}, _inner_rect}
-      ] = widgets
-
-      assert popup_rect == popup_rect2
+      assert {:noreply, %State{index: 0}} =
+               Host.update({:info, {:slides_tui, :prev}}, basic_state(1))
     end
 
-    test "popup omitted when notes_open? is false" do
-      state = interactive_state()
-      widgets = Host.render(state, @frame)
-      # Clear + ground + body Block + slide + 7 footer widgets = 11
-      assert length(widgets) == 11
+    test "a slide change pushes the new view to presenters" do
+      {:noreply, _} = Host.update({:event, key("right")}, basic_state(0))
+
+      assert_receive {:slides_tui, :view, view}
+      assert %{index: 1, total: 3, title: nil, notes: nil, theme: :dracula} = view
+      assert view.next_title == "untitled"
     end
 
-    test "popup omitted when notes_open? but active slide has nil notes" do
-      state = interactive_state()
-      {:noreply, state} = Host.update({:event, key("right")}, state)
-      state = %{state | notes_open?: true}
+    test "a theme change pushes too, and the last slide has no next title" do
+      {:noreply, _} = Host.update({:event, key("t")}, basic_state(2))
+      assert_receive {:slides_tui, :view, %{theme: :midnight, next_title: nil}}
+    end
 
-      widgets = Host.render(state, @frame)
-      # Counter has no notes — chrome + slide + 7 footer widgets only
-      assert length(widgets) == 11
+    test "transitions that change nothing visible push nothing" do
+      {:noreply, _} = Host.update({:info, :anything}, basic_state(0))
+      {:noreply, _} = Host.update({:event, key("left")}, basic_state(0))
+      refute_receive {:slides_tui, :view, _}
+    end
+
+    test "sync always pushes, carrying the notes and the next title" do
+      state = interactive_state(talk_minutes: 30)
+      {:noreply, ^state} = Host.update({:info, {:slides_tui, :sync}}, state)
+
+      assert_receive {:slides_tui, :view, view}
+      assert view.notes == "## Static\n\nThese are the notes."
+      assert view.talk_minutes == 30
+    end
+
+    test "sync on an empty deck pushes an empty view" do
+      {:noreply, _} = Host.update({:info, {:slides_tui, :sync}}, %State{slides: []})
+      assert_receive {:slides_tui, :view, %{total: 0, title: nil, notes: nil}}
+    end
+
+    test "the timer starts with the deck" do
+      {:ok, state, _} = Host.init(pattern: @basic_pattern)
+      assert is_integer(state.timer_started_at)
+    end
+
+    test "restart_timer starts it over from now" do
+      state = %{basic_state(1) | timer_started_at: System.monotonic_time(:millisecond) - 60_000}
+      {:noreply, restarted} = Host.update({:info, {:slides_tui, :restart_timer}}, state)
+
+      assert restarted.timer_started_at > state.timer_started_at
+      assert_receive {:slides_tui, :view, %{timer_started_at: started}}
+      assert started == restarted.timer_started_at
     end
   end
 
@@ -371,7 +367,6 @@ defmodule SlidesTui.HostTest do
                {%Paragraph{}, _},
                {%Paragraph{}, _},
                {%Paragraph{}, _},
-               {%Paragraph{}, _},
                {%Paragraph{}, _}
              ] = widgets
 
@@ -397,8 +392,8 @@ defmodule SlidesTui.HostTest do
 
       assert body_rect == %Rect{x: 0, y: 0, width: 80, height: 23}
       assert inner_rect == %Rect{x: 1, y: 1, width: 78, height: 21}
-      # progress + attribution + 5 hint chips
-      assert length(footer_widgets) == 7
+      # progress + attribution + 4 hint chips
+      assert length(footer_widgets) == 6
     end
 
     test "footer progress reflects the active slide's index" do

@@ -26,3 +26,9 @@ slides_tui-*.tar
 /docs/dev/
 mise.toml
 faq.md
+
+# Host key the presenter view's SSH daemon generates on first run.
+/priv/ssh/
+
+# Where `mix slides.tui` sends logs while the deck owns the terminal.
+/log/

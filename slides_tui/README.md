@@ -41,13 +41,23 @@ mix slides.tui --theme daylight
 
 The widest slides need a 152×39 grid. Below it the deck shows a "terminal too small" screen with both sizes instead of clipping slides, so the font can be tuned until the deck appears. `--min-size COLSxROWS` overrides the minimum.
 
+## Presenter view
+
+`mix slides.tui` also serves a presenter view over SSH on `127.0.0.1:2223`: the current slide's notes, the next slide's title, a talk timer and the clock. With the screen extended, the deck goes on the projector and the presenter view on the laptop:
+
+```bash
+mix slides.tui --talk-length 40   # projector
+ssh -p 2223 localhost             # laptop
+```
+
+The presenter view follows the deck live, and the slide keys work in both windows, so the clicker drives the deck whichever one has focus. The timer starts with the deck; `s` in the presenter view restarts it. With `--talk-length` it turns violet in the last five minutes and magenta once over. `q` there closes only the presenter view. The daemon listens on loopback only, with no password; `--presenter-port` moves it and `--no-presenter` turns it off. Logs go to `log/slides_tui.log`, never onto the slides.
+
 ## Controls
 
 | Key | Action |
 | --- | ------ |
 | `←` / `h` / `Page Up` | prev slide |
 | `→` / `l` / `Space` / `Page Down` | next slide |
-| `n` | toggle speaker-notes popup |
 | `t` | cycle colour theme |
 | `q` | quit |
 
