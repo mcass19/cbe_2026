@@ -2,10 +2,9 @@ defmodule TuisEverywhere.Slides.AdvancedWidgets do
   @moduledoc false
   use SlidesTui.Slide
 
-  alias ExRatatui.{Layout, Subscription}
+  alias ExRatatui.Subscription
   alias ExRatatui.ThreeD.{Camera, Light, Material, Mesh, Object, Scene, Transform}
-  alias ExRatatui.Widgets.{Block, Paragraph, Viewport3D}
-  alias SlidesTui.Layout, as: SlidesLayout
+  alias ExRatatui.Widgets.{Block, Viewport3D}
   alias SlidesTui.Theme
   alias TuisEverywhere.Slides.Ui
 
@@ -33,23 +32,15 @@ defmodule TuisEverywhere.Slides.AdvancedWidgets do
   def handle_info(:spin, state), do: {:noreply, %{state | angle: state.angle + 0.06}}
   def handle_info(_msg, state), do: {:noreply, state}
 
+  # The cube's box is square in pixels: twice as many columns as rows.
   def render(%{angle: angle}, area) do
-    bullets_height = 2 * length(@bullets) - 1
-
-    bundle = SlidesLayout.center(area, width: 120, height: 24)
-
-    [head, _gap, body] =
-      Layout.split(bundle, :vertical, [{:length, 4}, {:length, 2}, {:min, 0}])
-
-    [text_col, _mid, cube_col] =
-      Layout.split(body, :horizontal, [{:min, 0}, {:length, 4}, {:length, 44}])
-
-    [
-      {Ui.headline("Beyond text"), head},
-      {%Paragraph{text: Ui.bullet_lines(@bullets)},
-       SlidesLayout.center(text_col, height: bullets_height)},
-      {viewport(angle), cube_col}
-    ]
+    Ui.headline_with_figure(
+      area,
+      "Beyond text",
+      {:bullets, @bullets},
+      {:fit, 2, 1, &[{viewport(angle), &1}]},
+      share: 40
+    )
   end
 
   defp viewport(angle) do

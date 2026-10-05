@@ -2,10 +2,7 @@ defmodule TuisEverywhere.Slides.Lobby do
   @moduledoc false
   use SlidesTui.Slide
 
-  alias ExRatatui.Layout
   alias ExRatatui.Text.{Line, Span}
-  alias ExRatatui.Widgets.Paragraph
-  alias SlidesTui.Layout, as: SlidesLayout
   alias TuisEverywhere.Slides.Ui
 
   @qr "qr.png"
@@ -18,11 +15,6 @@ defmodule TuisEverywhere.Slides.Lobby do
     {"livebook", "attached to the same node"}
   ]
 
-  # The QR is square: this many rows, twice as many columns. Big on
-  # purpose, it has to scan from the back row.
-  @figure_rows 30
-  @gap 8
-
   def title, do: "lobby_tui"
 
   def notes do
@@ -33,37 +25,11 @@ defmodule TuisEverywhere.Slides.Lobby do
 
   def mount(_opts), do: {:ok, %{qr: Ui.load_image(@qr)}}
 
+  # The QR takes the bigger share: it has to scan from the back row.
   def render(%{qr: qr}, area) do
-    lines = lines()
-    text_height = length(lines)
-
-    text_width =
-      @ways |> Enum.map(fn {cmd, arg} -> String.length("$ #{cmd} #{arg}") end) |> Enum.max()
-
-    figure_width = 2 * @figure_rows
-    body_height = max(text_height, @figure_rows)
-
-    bundle =
-      SlidesLayout.center(area,
-        width: text_width + @gap + figure_width,
-        height: 4 + 2 + body_height
-      )
-
-    [head, _gap, body] =
-      Layout.split(bundle, :vertical, [{:length, 4}, {:length, 2}, {:min, 0}])
-
-    [text_col, _mid, figure_col] =
-      Layout.split(body, :horizontal, [
-        {:length, text_width},
-        {:length, @gap},
-        {:length, figure_width}
-      ])
-
-    [
-      {Ui.headline("Everybody in"), head},
-      {%Paragraph{text: lines}, SlidesLayout.center(text_col, height: text_height)}
-      | Ui.figure(qr, @qr, SlidesLayout.center(figure_col, height: @figure_rows))
-    ]
+    Ui.headline_with_figure(area, "Everybody in", {:lines, lines()}, Ui.figure(qr, @qr),
+      share: 55
+    )
   end
 
   defp lines do

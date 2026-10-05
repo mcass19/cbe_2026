@@ -39,7 +39,7 @@ mix slides.tui --theme daylight
 
 ## Terminal size
 
-The widest slides need a 152×39 grid. Below it the deck shows a "terminal too small" screen with both sizes instead of clipping slides, so the font can be tuned until the deck appears. `--min-size COLSxROWS` overrides the minimum.
+A terminal only scales text through its font size, so the slides scale the other way round: they fill whatever grid the font leaves. Headlines go big once there's room, bullets wrap, and images, the QR, 3D and canvases grow with their share of the slide. So the font size is the zoom: pick one that reads from the back of the room. The deck needs 110×30 at least; below it a "terminal too small" screen shows both sizes instead of clipping slides. `--min-size COLSxROWS` overrides the minimum.
 
 ## Presenter view
 

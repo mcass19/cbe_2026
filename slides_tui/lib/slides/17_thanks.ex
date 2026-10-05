@@ -2,10 +2,8 @@ defmodule TuisEverywhere.Slides.Thanks do
   @moduledoc false
   use SlidesTui.Slide
 
-  alias ExRatatui.{Layout, Style}
+  alias ExRatatui.Style
   alias ExRatatui.Text.{Line, Span}
-  alias ExRatatui.Widgets.Paragraph
-  alias SlidesTui.Layout, as: SlidesLayout
   alias TuisEverywhere.Slides.Ui
 
   def notes do
@@ -31,18 +29,9 @@ defmodule TuisEverywhere.Slides.Thanks do
       [Line.new([Span.new("Questions?", style: %Style{modifiers: [:bold]})]), Line.new([])] ++
         Enum.map(["" | @links], &Line.new([Span.new(&1, style: Ui.cyan_style())]))
 
-    bundle = SlidesLayout.center(area, height: 4 + 2 + length(lines))
-
-    [banner, _gap, sub] =
-      Layout.split(bundle, :vertical, [{:length, 4}, {:length, 2}, {:min, 0}])
-
-    links = %Paragraph{text: lines, alignment: :center}
-
     # Bookend to the title slide: that one paints itself violet letter
     # by letter; this one is already fully painted, no animation.
-    [
-      {Ui.headline(Line.new([Span.new("Thanks!", style: Ui.violet_style())])), banner},
-      {links, sub}
-    ]
+    banner = Line.new([Span.new("Thanks!", style: Ui.violet_style())])
+    Ui.headline_with_text(area, banner, {:lines, lines}, alignment: :center, banner: :own)
   end
 end

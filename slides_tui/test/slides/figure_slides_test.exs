@@ -45,21 +45,40 @@ defmodule TuisEverywhere.Slides.FigureSlidesTest do
     end
   end
 
-  describe "Ui.figure/3" do
-    test "draws a placeholder box naming the file when there is no image" do
+  describe "Ui.bullet_lines/3" do
+    test "wraps with a hanging indent, keeps styles, and drops the spacing when too tall" do
+      items = ["`aaaa` bbbb cccc", "dddd"]
+      [first, second, blank, third] = Ui.bullet_lines(items, 12)
+
+      assert [_marker, %Span{content: "aaaa", style: %Style{fg: cyan}}, %Span{content: " bbbb"}] =
+               first.spans
+
+      assert cyan != nil
+      assert [%Span{content: "  "}, %Span{content: "cccc"}] = second.spans
+      assert blank.spans == []
+      assert [_marker, %Span{content: "dddd"}] = third.spans
+
+      assert length(Ui.bullet_lines(items, 12, 3)) == 3
+    end
+  end
+
+  describe "Ui.figure/2" do
+    test "without an image, a 16:9 placeholder box naming the file" do
+      assert {:fit, 32, 9, draw} = Ui.figure(nil, "shot.png")
       rect = %Rect{x: 10, y: 5, width: 40, height: 10}
 
       assert [{%Block{title: " placeholder "}, ^rect}, {%Paragraph{text: hint}, hint_rect}] =
-               Ui.figure(nil, "shot.png", rect)
+               draw.(rect)
 
       assert hint =~ "shot.png"
       assert hint_rect.y > rect.y and hint_rect.y < rect.y + rect.height
     end
 
-    test "places the image when there is one" do
+    test "an image fits at its own aspect, two columns per pixel row" do
       image = Ui.load_image("profile.png")
+      assert {:fit, 800, 400, draw} = Ui.figure(image, "profile.png")
       rect = %Rect{x: 0, y: 0, width: 20, height: 10}
-      assert [{^image, ^rect}] = Ui.figure(image, "profile.png", rect)
+      assert [{^image, ^rect}] = draw.(rect)
     end
   end
 

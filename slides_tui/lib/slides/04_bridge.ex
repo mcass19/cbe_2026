@@ -4,31 +4,31 @@ defmodule TuisEverywhere.Slides.Bridge do
 
   alias ExRatatui.Layout
   alias ExRatatui.Widgets.CodeBlock
-  alias ExRatatui.Widgets.Paragraph
-  alias SlidesTui.Layout, as: SlidesLayout
   alias TuisEverywhere.Slides.Ui
 
+  # Code doesn't scale with the grid, so both sides stay under 56
+  # columns: next to the bullets, that still fits the deck's 110×30.
   @elixir_side """
-  %Paragraph{text: "Hello!", style: %Style{fg: :green}, alignment: :center}
-
-  # once per frame, the whole widget list becomes plain maps...
+  %Paragraph{text: "Hello!", alignment: :center,
+             style: %Style{fg: :green}}
+  # once per frame, the widget list becomes plain maps...
   %{"type" => "paragraph", "text" => "Hello!",
-    "style" => %{"fg" => "green"}, "alignment" => "center"}
-
+    "alignment" => "center",
+    "style" => %{"fg" => "green"}}
   # ...and crosses the NIF in one call
   Native.draw_frame(terminal, commands)
   """
 
   @rust_side """
   #[rustler::nif(schedule = "DirtyIo")]
-  fn draw_frame(terminal: ResourceArc<TerminalResource>, commands: Term)
-
+  fn draw_frame(terminal: ResourceArc<TerminalResource>,
+                commands: Term)
   // decode the map into ratatui's own types...
   let text  = text::decode_text(map["text"])?;
   let style = decode_style(map["style"])?;
-
   // ...and let ratatui do the rest
-  Paragraph::new(text).style(style).alignment(alignment).render(area, buf);
+  Paragraph::new(text).style(style).alignment(alignment)
+      .render(area, buf);
   """
 
   @bullets [
@@ -48,32 +48,24 @@ defmodule TuisEverywhere.Slides.Bridge do
   end
 
   def render(_state, area) do
-    code_width = 76
-    elixir_height = @elixir_side |> String.split("\n") |> length()
-    rust_height = @rust_side |> String.split("\n") |> length()
-    code_height = elixir_height + 1 + rust_height
-    bullets_height = 2 * length(@bullets) - 1
-    body_height = max(code_height, bullets_height)
+    code_lines = String.split(@elixir_side <> "\n" <> @rust_side, "\n", trim: true)
+    code_width = code_lines |> Enum.map(&String.length/1) |> Enum.max()
 
-    bundle = SlidesLayout.center(area, width: 150, height: 4 + 2 + body_height)
+    Ui.headline_with_figure(
+      area,
+      "The bridge",
+      {:bullets, @bullets},
+      {:fixed, code_width, length(code_lines) + 1, &code/1}
+    )
+  end
 
-    [head, _gap, body] =
-      Layout.split(bundle, :vertical, [{:length, 4}, {:length, 2}, {:min, 0}])
-
-    [text_col, _mid, code_col] =
-      Layout.split(body, :horizontal, [{:min, 0}, {:length, 4}, {:length, code_width}])
+  defp code(rect) do
+    elixir_height = @elixir_side |> String.split("\n", trim: true) |> length()
 
     [elixir_rect, _gap, rust_rect] =
-      Layout.split(SlidesLayout.center(code_col, height: code_height), :vertical, [
-        {:length, elixir_height},
-        {:length, 1},
-        {:min, 0}
-      ])
+      Layout.split(rect, :vertical, [{:length, elixir_height}, {:length, 1}, {:min, 0}])
 
     [
-      {Ui.headline("The bridge"), head},
-      {%Paragraph{text: Ui.bullet_lines(@bullets)},
-       SlidesLayout.center(text_col, height: bullets_height)},
       {%CodeBlock{content: @elixir_side, language: "elixir", theme: Ui.theme().code_theme},
        elixir_rect},
       {%CodeBlock{content: @rust_side, language: "rust", theme: Ui.theme().code_theme}, rust_rect}

@@ -2,10 +2,9 @@ defmodule TuisEverywhere.Slides.BeamSuperpowers do
   @moduledoc false
   use SlidesTui.Slide
 
-  alias ExRatatui.{Layout, Subscription}
+  alias ExRatatui.Subscription
   alias ExRatatui.Widgets.Canvas
   alias ExRatatui.Widgets.Canvas.{Line, Points}
-  alias SlidesTui.Layout, as: SlidesLayout
   alias TuisEverywhere.Slides.Ui
 
   # Section divider: the headline plus a small rocket climbing across a
@@ -74,12 +73,9 @@ defmodule TuisEverywhere.Slides.BeamSuperpowers do
 
   def handle_info(_msg, state), do: {:noreply, state}
 
+  # The sky keeps its @canvas_width:@canvas_height shape at any size,
+  # so the rocket never stretches.
   def render(%{tick: tick}, area) do
-    bundle = SlidesLayout.center(area, width: @canvas_width, height: 4 + 2 + @canvas_height)
-
-    [head, _gap, sky] =
-      Layout.split(bundle, :vertical, [{:length, 4}, {:length, 2}, {:min, 0}])
-
     # Colours come from the active theme at render time. The canvas
     # washes its own background, so it gets the theme's ground too;
     # left unset it would paint the terminal's background as a box.
@@ -93,7 +89,12 @@ defmodule TuisEverywhere.Slides.BeamSuperpowers do
       shapes: [%Points{coords: stars(), color: theme.muted} | rocket(tick, theme)]
     }
 
-    [{Ui.headline("BEAM superpowers"), head}, {canvas, sky}]
+    Ui.headline_with_figure(
+      area,
+      "BEAM superpowers",
+      nil,
+      {:fit, @canvas_width, @canvas_height, &[{canvas, &1}]}
+    )
   end
 
   defp stars, do: Enum.map(@stars, fn {x, y} -> {x * 1.0, y * 1.0} end)

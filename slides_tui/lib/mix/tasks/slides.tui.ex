@@ -21,7 +21,7 @@ defmodule Mix.Tasks.Slides.Tui do
       Press `t` in the deck to cycle.
     * `--min-size COLSxROWS` — the smallest terminal the deck renders
       in; below it a "terminal too small" screen shows the numbers.
-      Defaults to `152x39`, what the widest and tallest slides need.
+      Defaults to `110x30`; above it the slides grow to fill the grid.
     * `--presenter-port PORT` — where the presenter view (speaker notes,
       next slide, timer) is served over SSH on `127.0.0.1`. Defaults to
       `2223`; connect with `ssh -p 2223 localhost`.
@@ -35,9 +35,10 @@ defmodule Mix.Tasks.Slides.Tui do
 
   use Mix.Task
 
-  # The widest slides lay out 150 cells inside the border; the lobby's
-  # QR is the tallest at 36 rows plus border and footer.
-  @min_size {152, 39}
+  # The smallest grid the slides lay out in: the bridge's code next to
+  # its bullets is the widest thing, the longest bullet list the tallest.
+  # The font size picks the grid, so this is the biggest font that fits.
+  @min_size {110, 30}
   @presenter_port 2223
   @log_file "log/slides_tui.log"
 
@@ -108,7 +109,7 @@ defmodule Mix.Tasks.Slides.Tui do
          {rows, ""} <- Integer.parse(rows) do
       {cols, rows}
     else
-      _ -> Mix.raise("--min-size expects COLSxROWS, like 152x39, got #{size}")
+      _ -> Mix.raise("--min-size expects COLSxROWS, like 110x30, got #{size}")
     end
   end
 end

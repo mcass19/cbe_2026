@@ -2,17 +2,9 @@ defmodule TuisEverywhere.Slides.AboutMe do
   @moduledoc false
   use SlidesTui.Slide
 
-  alias ExRatatui.Image, as: ImageWidget
-  alias ExRatatui.{Layout, Style}
+  alias ExRatatui.Style
   alias ExRatatui.Text.{Line, Span}
-  alias ExRatatui.Widgets.Paragraph
-  alias SlidesTui.Layout, as: SlidesLayout
   alias TuisEverywhere.Slides.Ui
-
-  @photo_width 28
-  @photo_height 14
-  @gap 3
-  @text_width 40
 
   @name_style %Style{modifiers: [:bold]}
 
@@ -24,34 +16,16 @@ defmodule TuisEverywhere.Slides.AboutMe do
     """
   end
 
-  def mount(_opts) do
-    bytes =
-      :slides_tui
-      |> :code.priv_dir()
-      |> Path.join("slides/profile.png")
-      |> File.read!()
+  def mount(_opts), do: {:ok, %{image: Ui.load_image("profile.png")}}
 
-    {:ok, image} = ImageWidget.new(bytes, resize: :fit)
-    {:ok, %{image: image}}
-  end
-
+  # No headline: the chrome's title says it. The photo grows with the
+  # grid but stops at 60% of the height, so it doesn't loom over the room.
   def render(%{image: image}, area) do
-    text_lines = lines()
-    bundle_height = max(@photo_height, length(text_lines))
-
-    bundle =
-      SlidesLayout.center(area,
-        width: @photo_width + @gap + @text_width,
-        height: bundle_height
-      )
-
-    [photo_col, _gap, text_col] =
-      Layout.split(bundle, :horizontal, [{:length, @photo_width}, {:length, @gap}, {:min, 0}])
-
-    [
-      {image, SlidesLayout.center(photo_col, height: @photo_height)},
-      {%Paragraph{text: text_lines}, SlidesLayout.center(text_col, height: length(text_lines))}
-    ]
+    Ui.headline_with_figure(area, nil, {:lines, lines()}, Ui.figure(image, "profile.png"),
+      share: 35,
+      figure_side: :left,
+      max_height: 60
+    )
   end
 
   # Shell prompts share the title's violet rather than a terminal green,

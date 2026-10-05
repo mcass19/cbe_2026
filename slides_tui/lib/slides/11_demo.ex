@@ -2,10 +2,9 @@ defmodule TuisEverywhere.Slides.Demo do
   @moduledoc false
   use SlidesTui.Slide
 
-  alias ExRatatui.{Layout, Subscription}
+  alias ExRatatui.Subscription
   alias ExRatatui.Widgets.Canvas
   alias ExRatatui.Widgets.Canvas.Line
-  alias SlidesTui.Layout, as: SlidesLayout
   alias TuisEverywhere.Slides.Ui
 
   # Demo interstitial: a small theatre on a Canvas — the lobby_tui room
@@ -69,12 +68,9 @@ defmodule TuisEverywhere.Slides.Demo do
 
   def handle_info(_msg, state), do: {:noreply, state}
 
+  # The theatre keeps its @canvas_width:@canvas_height shape at any
+  # size, so the seats and curtains never stretch.
   def render(%{tick: tick}, area) do
-    bundle = SlidesLayout.center(area, width: @canvas_width, height: 4 + 2 + @canvas_height)
-
-    [head, _gap, stage] =
-      Layout.split(bundle, :vertical, [{:length, 4}, {:length, 2}, {:min, 0}])
-
     # Theme colours at render time; the canvas background too, or it
     # paints the terminal's own background as a box (see the rocket).
     theme = Ui.theme()
@@ -89,7 +85,12 @@ defmodule TuisEverywhere.Slides.Demo do
           seats(theme.violet) ++ curtains(tick, theme.accent) ++ badge(tick, theme)
     }
 
-    [{Ui.headline("Demo!"), head}, {canvas, stage}]
+    Ui.headline_with_figure(
+      area,
+      "Demo!",
+      nil,
+      {:fit, @canvas_width, @canvas_height, &[{canvas, &1}]}
+    )
   end
 
   @doc """
