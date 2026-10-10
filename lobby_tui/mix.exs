@@ -60,9 +60,12 @@ defmodule LobbyTui.MixProject do
       {:bandit, "~> 1.5"},
 
       # tui
-      {:ex_ratatui, "~> 0.16"},
+      {:ex_ratatui, "~> 0.17"},
       {:phoenix_ex_ratatui, "~> 0.3"},
       {:kino_ex_ratatui, "~> 0.2"},
+
+      # trying
+      {:ascii, "~> 0.4.1"},
 
       # ash
       {:ash_phoenix, "~> 2.0"},

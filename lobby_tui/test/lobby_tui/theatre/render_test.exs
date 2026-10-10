@@ -465,6 +465,49 @@ defmodule LobbyTui.Theatre.RenderTest do
       assert Enum.any?(spans, &(&1.content == "a" and &1.style.fg == {:rgb, 34, 206, 222}))
     end
 
+    defp with_marquee(state) do
+      anim = Ascii.new!("marquee", parts: true, options: %{text: "now showing"})
+      {frame, _anim} = Ascii.frame(anim, 1.0)
+      %{state | marquee_frame: frame}
+    end
+
+    test "an open stage with an empty feed plays the marquee sign" do
+      steps = LobbyTui.Theatre.curtain_steps()
+      lines = Render.world_lines(with_marquee(seated_state(steps)), 176, @vh)
+      text = stage_text(lines)
+
+      # Its frame of bulbs and box drawing, centred on the stage.
+      assert Enum.any?(text, &(&1 =~ "╔═══"))
+      assert Enum.any?(text, &(&1 =~ "╚═══"))
+
+      # The sign is 61×10, the opening's full height: its top-left bulb sits
+      # on the first drape row. Coloured parts keep their ink, all of it on
+      # the stage interior.
+      top = World.stage_rows().last - 9
+
+      assert %Span{content: bulb, style: %Style{fg: {:rgb, _, _, _}, bg: interior}} =
+               stage_cell(lines, @stage_center - 30, top)
+
+      assert bulb in ["o", "·"]
+      assert interior == stage_cell(lines, @stage_center, curtain_row()).style.bg
+    end
+
+    test "the marquee gives way to the first message" do
+      steps = LobbyTui.Theatre.curtain_steps()
+      state = with_marquee(seated_state(steps, [msg("gus", "hello")]))
+      text = Render.world_lines(state, 176, @vh) |> stage_text()
+
+      assert Enum.any?(text, &(&1 =~ "gus: hello"))
+      refute Enum.any?(text, &(&1 =~ "╔═══"))
+    end
+
+    test "the marquee comes down with the curtain" do
+      steps = LobbyTui.Theatre.curtain_steps()
+      lines = Render.world_lines(with_marquee(seated_state(steps - 1)), 176, @vh)
+
+      refute Enum.any?(stage_text(lines), &(&1 =~ "╔═══"))
+    end
+
     test "messages stay hidden until the curtain is all the way open" do
       steps = LobbyTui.Theatre.curtain_steps()
       feed = [msg("gus", "hello")]

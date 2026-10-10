@@ -1,6 +1,6 @@
 defmodule LobbyTui.Theatre.Render do
   @moduledoc """
-  Pure rendering: state plus frame in, `{widget, rect}` pairs out. The world is a Paragraph of styled spans cropped by a camera that follows the attendee. Per visible cell the compositor layers, back to front: the painted theatre scene, a reserved-chair wash for seats whose occupant is temporarily gone (the disconnect grace window — standing frees a seat immediately, so held-but-empty only means "reconnecting"), avatar sprites (others first, self last), and floating name labels (others first, self last) — see design doc section D3. Once seated the camera lifts to the stage and the feed plays there, between the parted curtains, rather than in a band of its own. The last line is a one-row status strip that shows the current hint, if any, and is otherwise blank: the surrounding HTML has no written key legend (its buttons name their own actions), so this row is the only place situational guidance appears.
+  Pure rendering: state plus frame in, `{widget, rect}` pairs out. The world is a Paragraph of styled spans cropped by a camera that follows the attendee. Per visible cell the compositor layers, back to front: the painted theatre scene, a reserved-chair wash for seats whose occupant is temporarily gone (the disconnect grace window — standing frees a seat immediately, so held-but-empty only means "reconnecting"), avatar sprites (others first, self last), and floating name labels (others first, self last) — see design doc section D3. Once seated the camera lifts to the stage and the feed plays there, between the parted curtains, rather than in a band of its own; until the feed has its first message, an `Ascii` marquee sign plays there instead. The last line is a one-row status strip that shows the current hint, if any, and is otherwise blank: the surrounding HTML has no written key legend (its buttons name their own actions), so this row is the only place situational guidance appears.
   """
 
   alias ExRatatui.Frame
@@ -161,7 +161,43 @@ defmodule LobbyTui.Theatre.Render do
 
     overlay
     |> open_curtain(cols, x_range, y_range)
+    |> paint_stage_marquee(state, x_range, y_range)
     |> paint_stage_feed(state, cols, x_range, y_range)
+  end
+
+  # The "now showing" sign, centred in the opening, for as long as the
+  # stage is open with nothing on it. `Theatre` stops the sign a tick after
+  # either changes, so the guard keeps a stale frame off a feed or a
+  # closing drape in the meantime. Spaces are skipped: the opening behind
+  # is already the stage interior.
+  defp paint_stage_marquee(
+         overlay,
+         %State{feed: [], marquee_frame: %Ascii.Frame{} = frame, curtain: curtain},
+         x_range,
+         y_range
+       ) do
+    if curtain == LobbyTui.Theatre.curtain_steps() do
+      left = @stage_center_x - div(frame.cols, 2)
+      top = @stage_curtain_rows.first + div(Range.size(@stage_curtain_rows) - frame.rows, 2)
+
+      for {line, dy} <- frame |> Ascii.ExRatatui.lines(ground: false) |> Enum.with_index(),
+          {{char, fg}, dx} <- line |> marquee_cells() |> Enum.with_index(),
+          char != " ",
+          pos = {left + dx, top + dy},
+          in_ranges?(pos, x_range, y_range),
+          into: overlay do
+        {pos, %Span{content: char, style: %Style{fg: fg || @stage_body, bg: @stage_interior}}}
+      end
+    else
+      overlay
+    end
+  end
+
+  defp paint_stage_marquee(overlay, _state, _x_range, _y_range), do: overlay
+
+  # `lines/2` gives a span per run of one colour; the overlay wants a cell.
+  defp marquee_cells(%Line{spans: spans}) do
+    for span <- spans, char <- String.graphemes(span.content), do: {char, span.style.fg}
   end
 
   # The drape parts symmetrically about the centre line, so the opening is

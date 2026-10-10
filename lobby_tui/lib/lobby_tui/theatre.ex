@@ -15,6 +15,12 @@ defmodule LobbyTui.Theatre do
   @curtain_steps 8
   @curtain_tick_ms 55
 
+  # The empty stage's "now showing" sign. 12 fps is half the piece's own
+  # 24: plenty for chasing bulbs and a scroll, and it halves the renders
+  # every idle seated session costs.
+  @marquee_tick_ms 83
+  @marquee_text "now showing · the stage is yours · say hi from your seat ·"
+
   @doc "Frames in a full curtain sweep. `State.curtain` runs 0..this."
   def curtain_steps, do: @curtain_steps
 
@@ -180,8 +186,10 @@ defmodule LobbyTui.Theatre do
   # rather than stored, so a sit-then-stand mid-sweep simply reverses on
   # the next frame instead of needing the in-flight animation cancelled.
   def handle_info(:curtain_tick, state) do
-    {:noreply, state |> step_curtain() |> schedule_curtain()}
+    {:noreply, state |> step_curtain() |> schedule_curtain() |> start_marquee()}
   end
+
+  def handle_info(:marquee_tick, state), do: {:noreply, step_marquee(state)}
 
   def handle_info(_msg, state), do: {:noreply, state}
 
@@ -208,6 +216,41 @@ defmodule LobbyTui.Theatre do
     end
 
     state
+  end
+
+  # -- marquee ---------------------------------------------------------------
+
+  # The sign plays while the stage is open and has nothing else to show.
+  # The first message, or the curtain starting to close, takes it down.
+  defp stage_idle?(%State{seated?: true, feed: [], curtain: @curtain_steps}), do: true
+  defp stage_idle?(_state), do: false
+
+  # Only ever one tick in flight: a running sign (`marquee` set) already
+  # has one queued, so the curtain reaching open again just keeps it.
+  defp start_marquee(%State{marquee: nil} = state) do
+    if stage_idle?(state) do
+      anim = Ascii.new!("marquee", parts: true, options: %{text: @marquee_text})
+      %{state | marquee: anim, marquee_t: 0.0} |> advance_marquee(0.0)
+    else
+      state
+    end
+  end
+
+  defp start_marquee(state), do: state
+
+  defp step_marquee(%State{marquee: nil} = state), do: state
+
+  defp step_marquee(state) do
+    if stage_idle?(state),
+      do: advance_marquee(state, @marquee_tick_ms / 1000),
+      else: %{state | marquee: nil, marquee_t: 0.0, marquee_frame: nil}
+  end
+
+  defp advance_marquee(state, dt) do
+    t = state.marquee_t + dt
+    {frame, anim} = Ascii.frame(state.marquee, t)
+    Process.send_after(self(), :marquee_tick, @marquee_tick_ms)
+    %{state | marquee: anim, marquee_t: t, marquee_frame: frame}
   end
 
   # -- side effects ----------------------------------------------------------

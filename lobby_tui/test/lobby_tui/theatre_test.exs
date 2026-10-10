@@ -286,6 +286,50 @@ defmodule LobbyTui.TheatreTest do
     end
   end
 
+  describe "the stage marquee" do
+    alias LobbyTui.Theatre.State
+
+    defp opening(feed) do
+      attendee = %LobbyTui.Lobby.Attendee{id: "self", nickname: "me", avatar_id: nil}
+      steps = Theatre.curtain_steps()
+      %{State.new(attendee, :cyan) | seated?: true, feed: feed, curtain: steps - 1}
+    end
+
+    test "the curtain opening onto an empty feed starts the sign" do
+      {:noreply, open} = Theatre.handle_info(:curtain_tick, opening([]))
+
+      assert %Ascii.Frame{cols: 61, rows: 10} = open.marquee_frame
+      assert_receive :marquee_tick, 200
+
+      {:noreply, ticked} = Theatre.handle_info(:marquee_tick, open)
+      assert ticked.marquee_t > open.marquee_t
+    end
+
+    test "a stage with messages on it never starts the sign" do
+      {:noreply, open} = Theatre.handle_info(:curtain_tick, opening([%{id: 1, body: "hi"}]))
+
+      assert open.marquee == nil
+      refute_receive :marquee_tick, 150
+    end
+
+    test "the first message takes the sign down and stops its ticks" do
+      {:noreply, open} = Theatre.handle_info(:curtain_tick, opening([]))
+      assert_receive :marquee_tick, 200
+
+      {:noreply, stopped} =
+        Theatre.handle_info(:marquee_tick, %{open | feed: [%{id: 1, body: "hi"}]})
+
+      assert stopped.marquee == nil
+      assert stopped.marquee_frame == nil
+      refute_receive :marquee_tick, 150
+    end
+
+    test "a stray tick with no sign running is ignored" do
+      state = opening([])
+      assert {:noreply, ^state} = Theatre.handle_info(:marquee_tick, state)
+    end
+  end
+
   test "seated + space frees the seat, clears seated? and the feed" do
     state = mount!()
     seat = fresh_free_seat!()

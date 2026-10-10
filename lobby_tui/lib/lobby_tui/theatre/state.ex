@@ -22,6 +22,13 @@ defmodule LobbyTui.Theatre.State do
             # `LobbyTui.Theatre`, consumed by `Render`; sitting drives it
             # up, standing drives it back down.
             curtain: 0,
+            # The "now showing" sign (an `Ascii` marquee) that plays on an
+            # open stage until the feed has its first message: the
+            # animation, the time it has played to, and its latest frame.
+            # Driven by `LobbyTui.Theatre`, painted by `Render`.
+            marquee: nil,
+            marquee_t: 0.0,
+            marquee_frame: nil,
             hint: nil,
             connected?: false,
             refresh_pending?: false,
