@@ -215,20 +215,16 @@ defmodule TuisEverywhere.Slides.Ui do
   end
 
   @doc """
-  The figure for an image: it fills its slot at the image's own aspect.
-  Without the image (`nil`), a dashed violet 16:9 box naming the file
+  The figure for an image: it fills its slot at the image's own aspect,
+  inside a rounded violet frame so screenshots don't bleed into the
+  ground. Without the image (`nil`), a violet 16:9 box naming the file
   to drop into `priv/slides/`, so slides can be written before their
   screenshots exist.
   """
   def figure(nil, filename) do
     {:fit, 32, 9,
      fn rect ->
-       box = %Block{
-         borders: [:all],
-         border_type: :rounded,
-         border_style: violet_style(),
-         title: " placeholder "
-       }
+       box = %Block{frame() | title: " placeholder "}
 
        hint = %Paragraph{
          text: "drop #{filename} into priv/slides/",
@@ -236,21 +232,36 @@ defmodule TuisEverywhere.Slides.Ui do
          style: subtle_style()
        }
 
-       inner = %{
-         rect
-         | x: rect.x + 1,
-           y: rect.y + 1,
-           width: max(rect.width - 2, 0),
-           height: max(rect.height - 2, 0)
-       }
-
-       [{box, rect}, {hint, SlidesLayout.center(inner, height: 1)}]
+       [{box, rect}, {hint, SlidesLayout.center(inset(rect), height: 1)}]
      end}
   end
 
   def figure(image, _filename) do
     {w, h} = ImageWidget.dimensions(image)
-    {:fit, 2 * w, h, fn rect -> [{image, rect}] end}
+    aspect = {:fit, 2 * w, h, nil}
+
+    {:fit, 2 * w, h,
+     fn rect ->
+       # The image fits inside the border at its own aspect and the
+       # frame hugs whatever that leaves, so no strip of ground shows
+       # between picture and border.
+       %Rect{width: max_w, height: max_h} = inset(rect)
+       {img_w, img_h} = figure_size(aspect, max_w, max_h)
+       framed = SlidesLayout.center(rect, width: img_w + 2, height: img_h + 2)
+       [{frame(), framed}, {image, inset(framed)}]
+     end}
+  end
+
+  defp frame, do: %Block{borders: [:all], border_type: :rounded, border_style: violet_style()}
+
+  defp inset(%Rect{} = rect) do
+    %{
+      rect
+      | x: rect.x + 1,
+        y: rect.y + 1,
+        width: max(rect.width - 2, 0),
+        height: max(rect.height - 2, 0)
+    }
   end
 
   @doc """
