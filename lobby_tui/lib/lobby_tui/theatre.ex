@@ -392,6 +392,11 @@ defmodule LobbyTui.Theatre do
     Phoenix.PubSub.subscribe(LobbyTui.PubSub, LobbyTui.Presence.topic())
     Phoenix.PubSub.subscribe(LobbyTui.PubSub, "lobby:seats")
     Phoenix.PubSub.subscribe(LobbyTui.PubSub, "lobby:stage")
+
+    # Who is already here decides where we land, so the spawn cell is
+    # picked before we are tracked and first show up to everyone else.
+    others_by_pos = State.index_by_pos(LobbyTui.Presence.others(state.attendee.id))
+    state = %{state | pos: World.spawn_point(Map.keys(others_by_pos))}
     {:ok, _ref} = LobbyTui.Presence.track_attendee(state)
 
     # Anchors from `World` for the same reason as the seat broadcast above:
@@ -410,7 +415,7 @@ defmodule LobbyTui.Theatre do
     state = %{
       state
       | connected?: true,
-        others_by_pos: State.index_by_pos(LobbyTui.Presence.others(state.attendee.id)),
+        others_by_pos: others_by_pos,
         occupied: occupied
     }
 

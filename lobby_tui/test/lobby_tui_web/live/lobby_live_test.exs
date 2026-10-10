@@ -67,8 +67,13 @@ defmodule LobbyTuiWeb.LobbyLiveTest do
 
   @directions [up: {0, -1}, down: {0, 1}, left: {-1, 0}, right: {1, 0}]
 
-  defp path_to(target) do
-    bfs(:queue.from_list([{LobbyTui.World.spawn_point(), []}]), MapSet.new(), target)
+  # Spawn cells are random, so the walk starts wherever the attendee
+  # actually landed, as Presence tells everyone else.
+  defp path_to(attendee, target) do
+    %{metas: [%{x: x, y: y} | _]} =
+      LobbyTui.Presence.get_by_key(LobbyTui.Presence.topic(), attendee.id)
+
+    bfs(:queue.from_list([{{x, y}, []}]), MapSet.new(), target)
   end
 
   defp bfs(queue, visited, target) do
@@ -157,7 +162,7 @@ defmodule LobbyTuiWeb.LobbyLiveTest do
   # action they perform, so a row repeating them was only taking space from
   # the room. What has to keep working is the pad itself swapping.
   test "the pad swaps between the arrows and stand, and back again", %{conn: conn} do
-    {conn, _attendee} = join_conn(conn)
+    {conn, attendee} = join_conn(conn)
     {:ok, view, html} = live(conn, ~p"/lobby")
     tui = boot_transport(view)
 
@@ -167,7 +172,7 @@ defmodule LobbyTuiWeb.LobbyLiveTest do
     assert has_element?(view, "#d-pad [phx-value-dir='up']")
     assert has_element?(view, "#sit-button", "sit")
 
-    for dir <- path_to(free_seat!()), do: dpad_click(view, tui, dir)
+    for dir <- path_to(attendee, free_seat!()), do: dpad_click(view, tui, dir)
     sit_button_click(view, tui)
 
     # Seated, walking is off the table but ▲▼ leaf the stage feed, so the
@@ -193,7 +198,7 @@ defmodule LobbyTuiWeb.LobbyLiveTest do
     # "lobby:seats" broadcast (that only updates the occupancy map, for
     # rendering others' seats). So exercise the real D-pad path: walk from
     # spawn to a seat that's free right now, then click "sit".
-    for dir <- path_to(free_seat!()), do: dpad_click(view, tui, dir)
+    for dir <- path_to(attendee, free_seat!()), do: dpad_click(view, tui, dir)
     dpad_click(view, tui, "s")
 
     # The LV subscribes to lobby:seats and reveals the chat form on its own
@@ -230,7 +235,7 @@ defmodule LobbyTuiWeb.LobbyLiveTest do
 
     assert has_element?(view, "#sit-button", "sit")
 
-    for dir <- path_to(free_seat!()), do: dpad_click(view, tui, dir)
+    for dir <- path_to(attendee, free_seat!()), do: dpad_click(view, tui, dir)
     sit_button_click(view, tui)
 
     assert has_element?(view, "#chat-form")

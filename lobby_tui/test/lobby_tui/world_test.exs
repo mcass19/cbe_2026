@@ -75,6 +75,45 @@ defmodule LobbyTui.WorldTest do
       assert y > Enum.map(front_row(), & &1.y) |> Enum.max()
       refute y in World.lobby_rows()
     end
+
+    test "a connecting attendee lands on free walkway floor" do
+      {_x, walkway_y} = World.spawn_point()
+      taken = for x <- 60..120, do: {x, walkway_y}
+
+      for _attempt <- 1..50 do
+        {x, y} = pos = World.spawn_point(taken)
+
+        assert World.tile_at(pos) == :floor
+        assert y in (walkway_y - 1)..walkway_y
+        assert x in 7..(World.width() - 8)
+        refute pos in taken
+      end
+    end
+
+    # The feedback this covers: a whole audience joining at once used to
+    # land on one cell, one heap of avatars in the middle of the walkway.
+    test "a room joining all at once spreads along the walkway" do
+      arrivals =
+        Enum.reduce(1..70, [], fn _i, taken -> [World.spawn_point(taken) | taken] end)
+
+      assert arrivals |> Enum.uniq() |> length() == 70
+
+      xs = Enum.map(arrivals, &elem(&1, 0))
+      assert Enum.max(xs) - Enum.min(xs) > 140
+
+      # The first fourteen (about as many as fit side by side) keep clear
+      # of each other rather than stacking up.
+      first = arrivals |> Enum.reverse() |> Enum.take(14) |> Enum.map(&elem(&1, 0)) |> Enum.sort()
+      gaps = first |> Enum.chunk_every(2, 1, :discard) |> Enum.map(fn [a, b] -> b - a end)
+      assert Enum.count(gaps, &(&1 >= 4)) >= 10
+    end
+
+    test "a full walkway falls back to the centre" do
+      {_x, walkway_y} = World.spawn_point()
+      everything = for x <- 0..World.width(), y <- (walkway_y - 1)..walkway_y, do: {x, y}
+
+      assert World.spawn_point(everything) == World.spawn_point()
+    end
   end
 
   describe "the seat lattice" do

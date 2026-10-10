@@ -90,7 +90,7 @@ defmodule LobbyTui.World do
   def lobby_rows, do: @lobby_rows
 
   @doc """
-  Where attendees appear: the walkway at the foot of the stage, centred.
+  The centre of the walkway at the foot of the stage: where an attendee stands until they connect (see `spawn_point/1`), and the fallback when the walkway is full.
 
   Deliberately not the lobby carpet. Landing at the far end meant the back
   rows filled first and the stage was a long walk away; landing at the
@@ -98,6 +98,36 @@ defmodule LobbyTui.World do
   to wander off to.
   """
   def spawn_point, do: {div(@width, 2), @walkway_rows.last}
+
+  # Kept half a sprite in from the side walls, so nobody arrives with their
+  # avatar cut off by the wall.
+  @spawn_margin 6
+  @spawn_cells for y <- @walkway_rows,
+                   x <- (1 + @spawn_margin)..(@width - 2 - @spawn_margin),
+                   do: {x, y}
+
+  @spawn_candidates 12
+
+  @doc """
+  Where a newly connected attendee appears, given the cells everyone else is standing on: somewhere along the walkway, away from the others there.
+
+  A whole audience joins from the same QR code within a minute, and one spawn cell piled them all into a single heap at the centre. Instead this takes a dozen random free cells along the walkway and keeps the one with the most columns between it and its nearest neighbour (columns only: the walkway is two rows and a sprite is six tall, so rows give no room). The walkway fits about fourteen avatars side by side, so a full house still overlaps, just evenly. With no free cell left it falls back to `spawn_point/0`.
+  """
+  def spawn_point(taken) do
+    taken = MapSet.new(taken)
+    neighbours = for {x, y} <- taken, y in @walkway_rows, do: x
+
+    case Enum.reject(@spawn_cells, &MapSet.member?(taken, &1)) do
+      [] ->
+        spawn_point()
+
+      free ->
+        free |> Enum.take_random(@spawn_candidates) |> Enum.max_by(&clearance(&1, neighbours))
+    end
+  end
+
+  defp clearance(_cell, []), do: 0
+  defp clearance({x, _y}, neighbours), do: neighbours |> Enum.map(&abs(&1 - x)) |> Enum.min()
 
   @doc """
   The `{dx_range, dy_range}` cell offsets of a seat's painted block,
