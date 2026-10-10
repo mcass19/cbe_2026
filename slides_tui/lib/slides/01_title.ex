@@ -24,6 +24,11 @@ defmodule TuisEverywhere.Slides.Title do
     - tuis: terminal user interfaces. a library to build them in elixir
     - ratatui + beam superpowers
     - there's a demo because first talk, of course
+
+    ---
+
+    - ENERGY
+    - PAUSE
     """
   end
 

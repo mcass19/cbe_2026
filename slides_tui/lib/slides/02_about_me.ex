@@ -15,7 +15,7 @@ defmodule TuisEverywhere.Slides.AboutMe do
     - mauricio "mauri" cassola, software engineer from uruguay
     - netherlands, almost 4 years
     - the picture i use everywhere, mcass19 handle for all the links
-    - elixir for many years, from different angles, day to day now
+    - elixir for many years, from different angles - type system, day to day now
     """
   end
 

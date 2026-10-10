@@ -39,4 +39,4 @@ The deployed instance runs in the EU (Fly.io, `ams` region).
 ## Who is responsible
 
 Mauricio Cassola.
-mauricass19@gmail.com
+hi@mcass19.dev
