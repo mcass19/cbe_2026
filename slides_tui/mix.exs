@@ -40,7 +40,11 @@ defmodule SlidesTui.MixProject do
 
   defp deps do
     [
-      {:ex_ratatui, "~> 0.16"}
+      # Temporary: the local checkout, for images that follow font size
+      # changes (ctrl +/-), until that fix ships in a release. Built from
+      # source (EX_RATATUI_BUILD in mise.toml), which needs Rustler here.
+      {:ex_ratatui, path: "../../ex_ratatui"},
+      {:rustler, ">= 0.0.0", runtime: false}
     ]
   end
 end
