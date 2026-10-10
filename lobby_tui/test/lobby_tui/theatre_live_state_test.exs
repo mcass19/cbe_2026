@@ -77,13 +77,46 @@ defmodule LobbyTui.TheatreLiveStateTest do
     # ExRatatui.Server) — mount from a separate process here too, since
     # Presence.track/4 keys on the calling pid and a second track from the
     # same pid for the same attendee id would collide with the first.
-    remounted =
-      Task.async(fn -> Theatre.mount(attendee: state.attendee, connect?: true) end)
+    # The curtain tick and the Presence entry belong to that process, so
+    # they are read from inside it.
+    {remounted, curtain_tick, presence} =
+      Task.async(fn ->
+        {:ok, remounted} = Theatre.mount(attendee: state.attendee, connect?: true)
+        tick = receive do: (:curtain_tick -> :curtain_tick), after: (500 -> :none)
+        presence = LobbyTui.Presence.get_by_key(LobbyTui.Presence.topic(), state.attendee.id)
+        {remounted, tick, presence}
+      end)
       |> Task.await()
 
-    assert {:ok, remounted} = remounted
     assert remounted.seated?
     assert Enum.any?(remounted.feed, &(&1.body == "still here after refresh"))
+
+    # The curtain rises again, as it does for a fresh sit, rather than
+    # staying shut over the feed until the attendee stands and re-sits.
+    assert curtain_tick == :curtain_tick
+
+    # Back on the seat's anchor, for us and for everyone else. The first
+    # mount is still alive in this test process (a real reload would have
+    # killed it), so the attendee has two Presence entries here.
+    anchor = LobbyTui.World.seat_anchor(seat.row, seat.col)
+    assert remounted.pos == anchor
+    assert Enum.any?(presence.metas, &({&1.x, &1.y} == anchor))
+  end
+
+  test "remounting unseated lands on the walkway, curtain shut" do
+    state = mount_connected!()
+
+    {remounted, curtain_tick} =
+      Task.async(fn ->
+        {:ok, remounted} = Theatre.mount(attendee: state.attendee, connect?: true)
+        {remounted, receive(do: (:curtain_tick -> :curtain_tick), after: (100 -> :none))}
+      end)
+      |> Task.await()
+
+    refute remounted.seated?
+    assert curtain_tick == :none
+    assert LobbyTui.World.tile_at(remounted.pos) == :floor
+    assert LobbyTui.World.seat_at(remounted.pos) == nil
   end
 
   test "a stage broadcast prepends to a seated attendee's feed and is ignored unseated" do

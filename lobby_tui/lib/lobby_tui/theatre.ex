@@ -393,10 +393,19 @@ defmodule LobbyTui.Theatre do
     Phoenix.PubSub.subscribe(LobbyTui.PubSub, "lobby:seats")
     Phoenix.PubSub.subscribe(LobbyTui.PubSub, "lobby:stage")
 
-    # Who is already here decides where we land, so the spawn cell is
-    # picked before we are tracked and first show up to everyone else.
+    # A refresh/reconnect starts a brand-new Theatre state, but the attendee
+    # may still be holding a seat in Ash from before the reload. Both that
+    # and who else is here decide where we land, so they are read before we
+    # are tracked and first show up to everyone else.
     others_by_pos = State.index_by_pos(LobbyTui.Presence.others(state.attendee.id))
-    state = %{state | pos: World.spawn_point(Map.keys(others_by_pos))}
+
+    held_seat =
+      case Lobby.seat_of(state.attendee.id) do
+        {:ok, seat} -> seat
+        {:error, _unseated} -> nil
+      end
+
+    state = %{state | pos: arrival_point(held_seat, others_by_pos)}
     {:ok, _ref} = LobbyTui.Presence.track_attendee(state)
 
     # Anchors from `World` for the same reason as the seat broadcast above:
@@ -419,15 +428,22 @@ defmodule LobbyTui.Theatre do
         occupied: occupied
     }
 
-    # A refresh/reconnect starts a brand-new Theatre state, but the attendee
-    # may still be holding a seat in Ash from before the reload — without
-    # this check the fresh state comes up unseated while the seat (and any
-    # LobbyLive chat form gated on it) says otherwise.
-    case Lobby.seat_of(state.attendee.id) do
-      {:ok, _seat} -> %{state | seated?: true} |> load_feed()
-      {:error, _unseated} -> state
+    # Still holding a seat comes back seated, exactly as sitting down would:
+    # otherwise the fresh state is unseated while the seat (and any
+    # LobbyLive chat form gated on it) says otherwise, and a shut curtain
+    # hides the feed it just loaded.
+    case held_seat do
+      nil -> state
+      _seat -> %{state | seated?: true} |> load_feed() |> schedule_curtain()
     end
   end
+
+  # Back in the held seat, on its anchor like a fresh sit, rather than out
+  # on the walkway while the chair washes as empty and reconnecting.
+  defp arrival_point(nil, others_by_pos), do: World.spawn_point(Map.keys(others_by_pos))
+
+  defp arrival_point(seat, others_by_pos),
+    do: World.seat_anchor(seat.row, seat.col) || arrival_point(nil, others_by_pos)
 
   defp broadcast_position(%State{connected?: true} = state) do
     case LobbyTui.Presence.move(state) do
