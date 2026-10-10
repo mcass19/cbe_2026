@@ -137,3 +137,9 @@ body {
   color: var(--tui-fg);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
+
+/* Set once per page load from the screen width (see app.js); the embedded
+   TUI inherits it and measures its cells from it. */
+#theatre-wrap {
+  font-size: var(--theatre-font-size, 1rem);
+}

@@ -26,6 +26,16 @@ import {hooks as colocatedHooks} from "phoenix-colocated/lobby_tui"
 import {PhoenixExRatatuiHook} from "phoenix_ex_ratatui"
 import topbar from "../vendor/topbar"
 
+// The theatre's cells grow with the screen the page loads on, so the room
+// stays readable from the back of a hall when it's on the projector. The
+// width / 72 keeps a wide screen at roughly 120 columns of room; phones and
+// small laptops stay at the base 16px. Sized once, at load, on purpose: the
+// PhoenixExRatatui hook measures a cell only when it mounts, so a font that
+// changed on resize would leave the grid at the old size. Moving the window
+// to another screen therefore wants a reload.
+const theatreFontPx = Math.round(Math.min(40, Math.max(16, window.innerWidth / 72)))
+document.documentElement.style.setProperty("--theatre-font-size", `${theatreFontPx}px`)
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
