@@ -12,7 +12,7 @@ defmodule TuisEverywhere.Slides.TuisOutThere do
     - whole other talk in the box: two runtimes (this deck is the reducer one), images + 3D, markdown, mouse, custom widgets in pure elixir, headless tests, telemetry, burrito binaries. all in the docs
     - ash_tui, bb_tui, and the community list
     - contributions already happen, textarea wrapping came from outside. widgets need no rust
-    - the beam deserves tuis. come build one
+    - and that last bullet is the point...
     """
   end
 

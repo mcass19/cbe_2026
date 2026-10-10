@@ -37,12 +37,19 @@ defmodule SlidesTui.DeckTest do
       modules = Deck.discover()
       assert List.first(modules) == TuisEverywhere.Slides.Title
       assert List.last(modules) == TuisEverywhere.Slides.Thanks
-      # every numbered file is a slide; ui.ex is the only helper
+      # every numbered file is a slide; the unnumbered ones are helpers
       assert length(modules) == length(Path.wildcard("lib/slides/[0-9]*.ex"))
     end
 
-    test "the Ui helper next to the slides is not discovered as a slide" do
-      refute TuisEverywhere.Slides.Ui in Deck.discover()
+    test "the helpers next to the slides are not discovered as slides" do
+      modules = Deck.discover()
+
+      for helper <- [
+            TuisEverywhere.Slides.Ui,
+            TuisEverywhere.Slides.Rat,
+            TuisEverywhere.Slides.Rocket
+          ],
+          do: refute(helper in modules)
     end
   end
 end

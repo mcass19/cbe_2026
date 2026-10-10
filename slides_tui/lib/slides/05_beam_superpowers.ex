@@ -4,13 +4,14 @@ defmodule TuisEverywhere.Slides.BeamSuperpowers do
 
   alias ExRatatui.Subscription
   alias ExRatatui.Widgets.Canvas
-  alias ExRatatui.Widgets.Canvas.{Line, Points}
-  alias TuisEverywhere.Slides.Ui
+  alias ExRatatui.Widgets.Canvas.Points
+  alias TuisEverywhere.Slides.{Rocket, Ui}
 
-  # Section divider: the headline plus a small rocket climbing across a
-  # starfield on a Canvas. One animated thing, on screen for the one
-  # sentence that opens the BEAM half of the talk; the interval is torn
-  # down the moment we leave the slide.
+  # Section divider: the headline plus a small rocket (see `Rocket`),
+  # the ratatui rat riding it, climbing across a starfield on a Canvas.
+  # One animated thing, on screen for the one sentence that opens the
+  # BEAM half of the talk; the interval is torn down the moment we leave
+  # the slide. The closing slide launches the same rockets.
 
   @tick_ms 100
   # ~6s from bottom-left to top-right, then it re-enters and goes again
@@ -23,13 +24,12 @@ defmodule TuisEverywhere.Slides.BeamSuperpowers do
   @canvas_width 120
   @canvas_height 22
 
-  # Rocket outline in local coordinates, nose along +x. Rotated 45°
-  # and translated at render time.
-  @scale 2.4
-  @body [{-6, 2}, {4, 2}, {4, -2}, {-6, -2}, {-6, 2}]
-  @nose [{4, 2}, {9, 0}, {4, -2}]
-  @fin_top [{-6, 2}, {-9, 4}, {-4, 2}]
-  @fin_bottom [{-6, -2}, {-9, -4}, {-4, -2}]
+  @scale 3.0
+  @rat_scale 2.2
+
+  # How far off-canvas the flight starts and ends, so the whole rocket
+  # (flame to rat) is out of sight at both ends.
+  @margin 25.0
 
   # A fixed sky so the stars don't twinkle away every frame.
   @stars [
@@ -105,44 +105,13 @@ defmodule TuisEverywhere.Slides.BeamSuperpowers do
   # margin so it enters and leaves fully off-canvas.
   defp position(tick) do
     t = tick / @flight_ticks
-    {-20.0 + (@x_max + 40.0) * t, -15.0 + (@y_max + 30.0) * t}
-  end
-
-  defp rocket(tick, theme) do
-    {cx, cy} = position(tick)
-    place = &transform(&1, cx, cy)
-
-    hull =
-      [@body, @nose, @fin_top, @fin_bottom]
-      |> Enum.flat_map(&polyline(&1, place, theme.violet))
-
-    hull ++ flame(tick, place, theme.accent)
+    {-@margin + (@x_max + 2 * @margin + 10.0) * t, -@margin + (@y_max + 2 * @margin + 10.0) * t}
   end
 
   # Two-frame flicker: the exhaust alternates between a short and a
   # long plume every tick.
-  defp flame(tick, place, color) do
-    len = if rem(tick, 2) == 0, do: 5, else: 8
-    core = [{-6, 0}, {-6 - len, 0}]
-    upper = [{-6, 1}, {-6 - len * 0.6, 1.5}]
-    lower = [{-6, -1}, {-6 - len * 0.6, -1.5}]
-
-    Enum.flat_map([core, upper, lower], &polyline(&1, place, color))
-  end
-
-  defp polyline(points, place, color) do
-    points
-    |> Enum.map(place)
-    |> Enum.chunk_every(2, 1, :discard)
-    |> Enum.map(fn [{x1, y1}, {x2, y2}] ->
-      %Line{x1: x1, y1: y1, x2: x2, y2: y2, color: color}
-    end)
-  end
-
-  # Rotate 45° (nose to the upper right), scale, translate.
-  @cos45 :math.cos(:math.pi() / 4)
-  @sin45 :math.sin(:math.pi() / 4)
-  defp transform({x, y}, cx, cy) do
-    {cx + @scale * (x * @cos45 - y * @sin45), cy + @scale * (x * @sin45 + y * @cos45)}
+  defp rocket(tick, theme) do
+    flame = if rem(tick, 2) == 0, do: 5, else: 8
+    Rocket.shapes(position(tick), theme, scale: @scale, flame: flame, rat: @rat_scale)
   end
 end

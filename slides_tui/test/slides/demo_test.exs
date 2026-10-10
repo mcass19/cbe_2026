@@ -5,7 +5,7 @@ defmodule TuisEverywhere.Slides.DemoTest do
   alias ExRatatui.Subscription
   alias ExRatatui.Widgets.BigText
   alias ExRatatui.Widgets.Canvas
-  alias ExRatatui.Widgets.Canvas.Line
+  alias ExRatatui.Widgets.Canvas.{Line, Points}
   alias TuisEverywhere.Slides.Demo
 
   @area %Rect{x: 0, y: 0, width: 160, height: 40}
@@ -65,6 +65,22 @@ defmodule TuisEverywhere.Slides.DemoTest do
 
     # frame + seats + curtain folds, then the badge's lines on top
     assert length(open) > length(closed)
+  end
+
+  test "the badge carries the rat, inside the card" do
+    {:ok, state} = Demo.mount([])
+    text = SlidesTui.Theme.current().text
+    open = shapes(tick(state, 30))
+
+    rat = Enum.filter(open, &(&1.color == text))
+    assert Enum.any?(rat, &match?(%Points{}, &1))
+
+    # the card hangs 20..50 below the pivot at (100, 96), 32 wide; the
+    # swing moves its bottom by ~6 at most
+    for %Line{x1: x, y1: y} <- rat do
+      assert abs(x - 100) <= 16 + 6
+      assert y >= 96 - 50 - 6 and y <= 96 - 20
+    end
   end
 
   test "the badge swings after the curtains open" do

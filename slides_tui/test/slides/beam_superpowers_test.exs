@@ -45,6 +45,25 @@ defmodule TuisEverywhere.Slides.BeamSuperpowersTest do
     assert Enum.count(shapes, &match?(%Line{}, &1)) > 5
   end
 
+  test "a rat in the text colour rides on the rocket" do
+    {:ok, state} = Slide.mount([])
+    text = SlidesTui.Theme.current().text
+    shapes = canvas(tick(state, 30)).shapes
+
+    rat = Enum.filter(shapes, &match?(%Line{color: ^text}, &1))
+    hull = Enum.filter(shapes, &match?(%Line{color: c} when c != text, &1))
+    assert length(rat) > 5
+    assert Enum.any?(shapes, &match?(%Points{coords: [_eye], color: ^text}, &1))
+
+    # it rides along: every rat point sits within the rocket's reach
+    {hull_xs, hull_ys} = hull |> Enum.flat_map(&[{&1.x1, &1.y1}, {&1.x2, &1.y2}]) |> Enum.unzip()
+
+    for %Line{x1: x, y1: y} <- rat do
+      assert x > Enum.min(hull_xs) - 10 and x < Enum.max(hull_xs) + 10
+      assert y > Enum.min(hull_ys) - 10 and y < Enum.max(hull_ys) + 10
+    end
+  end
+
   test "the rocket climbs to the right on every tick" do
     {:ok, state} = Slide.mount([])
     x0 = rocket_x(state)

@@ -5,7 +5,7 @@ defmodule TuisEverywhere.Slides.Demo do
   alias ExRatatui.Subscription
   alias ExRatatui.Widgets.Canvas
   alias ExRatatui.Widgets.Canvas.Line
-  alias TuisEverywhere.Slides.Ui
+  alias TuisEverywhere.Slides.{Rat, Ui}
 
   # Demo interstitial: a small theatre on a Canvas — the lobby_tui room
   # in miniature. The curtains open when the slide comes up and reveal
@@ -50,8 +50,11 @@ defmodule TuisEverywhere.Slides.Demo do
   @strap_right [{0, 0}, {8, -20}]
   @badge [{-16, -20}, {16, -20}, {16, -50}, {-16, -50}, {-16, -20}]
   @clip [{-3, -20}, {-3, -24}, {3, -24}, {3, -20}]
-  @name [{-10, -33}, {10, -33}]
-  @role [{-10, -40}, {2, -40}]
+  # The badge's "photo": the ratatui rat (see `Rat`) sitting on the name
+  # line and waving, shifted right so body and tail sit centred on the card.
+  @name [{-12, -45}, {12, -45}]
+  @rat_origin {3.5, -45}
+  @rat_scale 1.6
 
   def notes do
     """
@@ -179,8 +182,12 @@ defmodule TuisEverywhere.Slides.Demo do
     else
       place = &transform(&1, angle(tick))
 
+      {rx, ry} = @rat_origin
+      on_card = fn {x, y} -> place.({rx + @rat_scale * x, ry + @rat_scale * y}) end
+
       Enum.flat_map([@strap_left, @strap_right], &polyline(&1, place, theme.accent)) ++
-        Enum.flat_map([@badge, @clip, @name, @role], &polyline(&1, place, theme.violet))
+        Enum.flat_map([@badge, @clip, @name], &polyline(&1, place, theme.violet)) ++
+        Rat.shapes(on_card, theme.text, :sitting)
     end
   end
 
