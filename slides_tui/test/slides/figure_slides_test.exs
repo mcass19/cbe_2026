@@ -88,9 +88,9 @@ defmodule TuisEverywhere.Slides.FigureSlidesTest do
       assert hint_rect.y > rect.y and hint_rect.y < rect.y + rect.height
     end
 
-    test "an image fits at its own aspect, two columns per pixel row" do
+    test "an image fits at its own aspect, in 7×16 px cells" do
       image = Ui.load_image("profile.png")
-      assert {:fit, 800, 400, _draw} = Ui.figure(image, "profile.png")
+      assert {:fit, 6400, 2800, _draw} = Ui.figure(image, "profile.png")
     end
 
     test "an image sits inside a violet frame that hugs it" do
@@ -98,12 +98,12 @@ defmodule TuisEverywhere.Slides.FigureSlidesTest do
       {:fit, _cols, _rows, draw} = Ui.figure(image, "profile.png")
       violet = Ui.violet()
 
-      # 800:400 inside the 18×8 left by the border is 16×8, so the frame
-      # shrinks to 18×10 and centers in the slot
+      # 6400:2800 inside the 18×8 left by the border is 16×7, so the
+      # frame shrinks to 18×9 and centers in the slot
       assert [
                {%Block{borders: [:all], border_style: %{fg: ^violet}},
-                %Rect{x: 1, y: 0, width: 18, height: 10}},
-               {^image, %Rect{x: 2, y: 1, width: 16, height: 8}}
+                %Rect{x: 1, y: 0, width: 18, height: 9}},
+               {^image, %Rect{x: 2, y: 1, width: 16, height: 7}}
              ] = draw.(%Rect{x: 0, y: 0, width: 20, height: 10})
     end
   end

@@ -45,13 +45,17 @@ defmodule TuisEverywhere.Slides.Ui do
   @widest_headline 17
   @gap_cols 4
   @figure_share 45
+  # A cell's width:height in pixels. Measured in Ghostty with JetBrains
+  # Mono (28×64 px on the talk screen); the default font's 1:2 guess left
+  # a strip of ground under every image.
+  @cell_aspect {7, 16}
 
   @typedoc """
   The right-hand side of `headline_with_figure/5`, and what draws it:
 
     * `{:fit, cols, rows, draw}` — grows to fill its share of the
-      stage, keeping a `cols:rows` aspect in cells (a cell is about
-      twice as tall as it is wide)
+      stage, keeping a `cols:rows` aspect in cells (a cell is 16:7
+      tall:wide in Ghostty with JetBrains Mono)
     * `{:fixed, cols, rows, draw}` — exactly that many cells, for text
       such as code that can't scale
 
@@ -242,9 +246,10 @@ defmodule TuisEverywhere.Slides.Ui do
 
   def figure(image, _filename) do
     {w, h} = ImageWidget.dimensions(image)
-    aspect = {:fit, 2 * w, h, nil}
+    {cell_w, cell_h} = @cell_aspect
+    aspect = {:fit, w * cell_h, h * cell_w, nil}
 
-    {:fit, 2 * w, h,
+    {:fit, w * cell_h, h * cell_w,
      fn rect ->
        # The image fits inside the border at its own aspect and the
        # frame hugs whatever that leaves, so no strip of ground shows
