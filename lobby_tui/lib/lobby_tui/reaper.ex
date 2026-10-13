@@ -39,8 +39,10 @@ defmodule LobbyTui.Reaper do
     # while a meta is still tracked, scheduling a reap for an attendee who
     # is, in fact, still connected. Re-check Presence directly (not just the
     # timers map, which only tracks scheduling) immediately before reaping.
+    # `meta_of/1` reads the tracker's table instead of calling its shard, so
+    # a busy room can't time this out and crash the Reaper with its timers.
     if Map.has_key?(state.timers, attendee_id) and
-         not Map.has_key?(LobbyTui.Presence.list(LobbyTui.Presence.topic()), attendee_id) do
+         is_nil(LobbyTui.Presence.meta_of(attendee_id)) do
       case LobbyTui.Lobby.get_attendee(attendee_id) do
         {:ok, attendee} -> LobbyTui.Lobby.leave(attendee)
         {:error, _already_gone} -> :ok

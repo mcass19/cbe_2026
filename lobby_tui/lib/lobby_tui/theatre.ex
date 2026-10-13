@@ -25,6 +25,13 @@ defmodule LobbyTui.Theatre do
   # room redraws them (see the presence_diff handler).
   @refresh_others_ms 200
 
+  # Positions go out to Presence at most this often: a viewer only redraws
+  # other people every `@refresh_others_ms` anyway, and every update is a
+  # call to the one Presence shard process plus a diff to every viewer. A
+  # step after a quiet spell goes out at once; steps inside the window are
+  # gathered and the latest position goes out when it closes.
+  @presence_push_ms 200
+
   @doc "Frames in a full curtain sweep. `State.curtain` runs 0..this."
   def curtain_steps, do: @curtain_steps
 
@@ -195,6 +202,10 @@ defmodule LobbyTui.Theatre do
 
   def handle_info(:marquee_tick, state), do: {:noreply, step_marquee(state)}
 
+  # Nothing on screen changes: the viewer already sees their own position.
+  def handle_info(:push_position, state),
+    do: {:noreply, flush_position(state), render?: false}
+
   def handle_info(_msg, state), do: {:noreply, state, render?: false}
 
   # -- curtain ---------------------------------------------------------------
@@ -344,9 +355,9 @@ defmodule LobbyTui.Theatre do
   end
 
   defp fetch_presence_color(occupant_id) do
-    case LobbyTui.Presence.get_by_key(LobbyTui.Presence.topic(), occupant_id) do
-      %{metas: [meta | _]} -> Map.get(meta, :color, :red)
-      _not_tracked -> :red
+    case LobbyTui.Presence.meta_of(occupant_id) do
+      %{} = meta -> Map.get(meta, :color, :red)
+      nil -> :red
     end
   end
 
@@ -411,6 +422,7 @@ defmodule LobbyTui.Theatre do
 
     state = %{state | pos: arrival_point(held_seat, others_by_pos)}
     {:ok, _ref} = LobbyTui.Presence.track_attendee(state)
+    state = %{state | pushed_pos: state.pos}
 
     # Anchors from `World` for the same reason as the seat broadcast above:
     # the record's stored coordinates date from boot-time seeding.
@@ -449,14 +461,35 @@ defmodule LobbyTui.Theatre do
   defp arrival_point(seat, others_by_pos),
     do: World.seat_anchor(seat.row, seat.col) || arrival_point(nil, others_by_pos)
 
+  defp broadcast_position(%State{connected?: true, push_armed?: true} = state), do: state
+
   defp broadcast_position(%State{connected?: true} = state) do
-    case LobbyTui.Presence.move(state) do
-      {:ok, _ref} -> state
-      # A reaped-then-moving edge: the attendee's presence entry is already
-      # gone, so there is nothing left to update.
-      {:error, _reason} -> state
-    end
+    Process.send_after(self(), :push_position, @presence_push_ms)
+    %{push_position(state) | push_armed?: true}
   end
 
   defp broadcast_position(state), do: state
+
+  # The window closed: send the latest position if it moved since the last
+  # push and keep the window going, or let it lapse after a quiet one.
+  defp flush_position(%State{pos: pos, pushed_pos: pos} = state),
+    do: %{state | push_armed?: false}
+
+  defp flush_position(state) do
+    Process.send_after(self(), :push_position, @presence_push_ms)
+    push_position(state)
+  end
+
+  defp push_position(state) do
+    case LobbyTui.Presence.move(state) do
+      {:ok, _ref} -> %{state | pushed_pos: state.pos}
+      # A reaped-then-moving edge: the attendee's presence entry is already
+      # gone, so there is nothing left to update.
+      {:error, _reason} -> %{state | pushed_pos: state.pos}
+    end
+  catch
+    # The shard is backed up. The TUI must outlive that: keep the position
+    # unpushed and the next window retries.
+    :exit, _timeout -> state
+  end
 end

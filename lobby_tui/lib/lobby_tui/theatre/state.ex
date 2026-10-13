@@ -32,6 +32,10 @@ defmodule LobbyTui.Theatre.State do
             hint: nil,
             connected?: false,
             refresh_pending?: false,
+            # Position pushes to Presence, throttled by `LobbyTui.Theatre`:
+            # whether a push window is open, and the position last sent.
+            push_armed?: false,
+            pushed_pos: nil,
             allow_quit?: false
 
   @doc """

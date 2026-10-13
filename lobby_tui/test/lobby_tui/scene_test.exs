@@ -7,6 +7,15 @@ defmodule LobbyTui.SceneTest do
 
   defp rgb({r, g, b}), do: {:rgb, r, g, b}
 
+  test "row/2 builds a row once, until the scene reloads" do
+    key = {:test_row, System.unique_integer()}
+    assert Scene.row(key, fn -> :built end) == :built
+    assert Scene.row(key, fn -> :rebuilt end) == :built
+
+    Scene.load!()
+    assert Scene.row(key, fn -> :rebuilt end) == :rebuilt
+  end
+
   test "the default theatre.png loads at boot, spanning the full 176x96 grid" do
     assert Scene.loaded?()
     # last valid cell of a 176x96 grid: col 175, row 95

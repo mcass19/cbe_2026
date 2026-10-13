@@ -16,6 +16,53 @@ defmodule LobbyTui.TheatreLiveStateTest do
     state
   end
 
+  defp step(state, dir) do
+    {:noreply, state} =
+      Theatre.handle_event(%ExRatatui.Event.Key{code: dir, kind: "press"}, state)
+
+    state
+  end
+
+  defp presence_pos(state) do
+    meta = LobbyTui.Presence.meta_of(state.attendee.id)
+    {meta.x, meta.y}
+  end
+
+  test "a step reaches Presence at once; steps inside the window go out when it closes" do
+    state = mount_connected!() |> step("left")
+    first = state.pos
+    assert presence_pos(state) == first
+    assert state.push_armed?
+
+    # Inside the window: held back.
+    state = step(state, "left")
+    refute state.pos == first
+    assert presence_pos(state) == first
+
+    assert_receive :push_position, 500
+    assert {:noreply, state, render?: false} = Theatre.handle_info(:push_position, state)
+    assert presence_pos(state) == state.pos
+    assert state.push_armed?
+
+    # A quiet window lets it lapse; the next step goes out at once again.
+    assert_receive :push_position, 500
+    assert {:noreply, state, render?: false} = Theatre.handle_info(:push_position, state)
+    refute state.push_armed?
+    state = step(state, "right")
+    assert presence_pos(state) == state.pos
+  end
+
+  test "others/1 and meta_of/1 read the tracker table" do
+    me = mount_connected!()
+    other = mount_connected!()
+
+    others = LobbyTui.Presence.others(me.attendee.id)
+    refute Map.has_key?(others, me.attendee.id)
+    assert %{nickname: nickname} = others[other.attendee.id]
+    assert nickname == other.attendee.nickname
+    assert LobbyTui.Presence.meta_of("nobody") == nil
+  end
+
   test "connecting tracks presence and loads current occupancy" do
     state = mount_connected!()
     presences = LobbyTui.Presence.list(LobbyTui.Presence.topic())

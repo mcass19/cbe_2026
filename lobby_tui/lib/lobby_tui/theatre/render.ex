@@ -92,15 +92,19 @@ defmodule LobbyTui.Theatre.Render do
   end
 
   def world_lines(state, vw, vh) do
+    {x_range, y_range, overlay} = compose(state, vw, vh)
+    for y <- y_range, do: cell_line(overlay, x_range, y)
+  end
+
+  defp compose(state, vw, vh) do
     {ox, oy} = viewport_origin(state, vw, vh)
     x_range = ox..(ox + min(vw, World.width()) - 1)
     y_range = oy..(oy + min(vh, World.height()) - 1)
-    overlay = build_overlay(state, x_range, y_range)
-
-    for y <- y_range do
-      %Line{spans: for(x <- x_range, do: Map.get(overlay, {x, y}) || scene_span({x, y}))}
-    end
+    {x_range, y_range, build_overlay(state, x_range, y_range)}
   end
+
+  defp cell_line(overlay, x_range, y),
+    do: %Line{spans: for(x <- x_range, do: Map.get(overlay, {x, y}) || scene_span({x, y}))}
 
   @doc """
   Where the viewport sits in the world.
@@ -131,7 +135,22 @@ defmodule LobbyTui.Theatre.Render do
   # one per cell. It looks the same, but encoding spans through the NIF is
   # most of a draw's cost, and a 120×40 room is 4,680 cells. `world_lines/3`
   # keeps one span per cell, so tests can still address a single cell.
-  defp cropped_lines(state, vw, vh), do: state |> world_lines(vw, vh) |> Enum.map(&merge_runs/1)
+  #
+  # Building and merging those spans was most of `render/2`'s own cost, and
+  # most rows have nobody on them: those come merged from `Scene`'s row
+  # cache, and only rows with something drawn over the scene are built.
+  defp cropped_lines(state, vw, vh) do
+    {x_range, y_range, overlay} = compose(state, vw, vh)
+    drawn_rows = for {{_x, y}, _span} <- overlay, into: MapSet.new(), do: y
+
+    for y <- y_range do
+      if MapSet.member?(drawn_rows, y) do
+        overlay |> cell_line(x_range, y) |> merge_runs()
+      else
+        Scene.row({y, x_range}, fn -> %{} |> cell_line(x_range, y) |> merge_runs() end)
+      end
+    end
+  end
 
   defp merge_runs(%Line{spans: spans} = line) do
     merged =

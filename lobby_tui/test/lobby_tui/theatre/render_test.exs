@@ -8,10 +8,9 @@ defmodule LobbyTui.Theatre.RenderTest do
   alias ExRatatui.Frame
   alias ExRatatui.Style
   alias ExRatatui.Text.Span
+  alias LobbyTui.Scene
   alias LobbyTui.Theatre.{Render, State}
   alias LobbyTui.World
-
-  @scene_key {LobbyTui.Scene, :cells}
 
   # 2 cols x 2 rows: opaque top-left, transparent top-right, opaque bottom
   # row (bottom-left is the anchor cell itself). Deliberately not 12x6 —
@@ -24,13 +23,13 @@ defmodule LobbyTui.Theatre.RenderTest do
   @avatar_cache %{"av" => %{cells: @fixture_sprite, color: {:rgb, 9, 9, 9}}}
 
   setup do
-    original = :persistent_term.get(@scene_key, %{})
-    :persistent_term.put(@scene_key, %{})
-    on_exit(fn -> :persistent_term.put(@scene_key, original) end)
+    original = Scene.cells_snapshot()
+    Scene.put_cells(%{})
+    on_exit(fn -> Scene.put_cells(original) end)
     :ok
   end
 
-  defp put_scene(cells), do: :persistent_term.put(@scene_key, cells)
+  defp put_scene(cells), do: Scene.put_cells(cells)
 
   defp state(pos \\ World.spawn_point()) do
     attendee = %LobbyTui.Lobby.Attendee{id: "self", nickname: "me", avatar_id: "av"}
@@ -317,6 +316,9 @@ defmodule LobbyTui.Theatre.RenderTest do
       assert graphemes(merged) == graphemes(per_cell)
       assert length(merged.spans) < length(per_cell.spans)
     end
+
+    # The second frame takes the empty rows from Scene's row cache.
+    assert [{%{text: %{lines: ^drawn}}, _rect}, _status] = Render.widgets(state({88, 88}), frame)
   end
 
   defp graphemes(line) do
