@@ -128,12 +128,37 @@ defmodule LobbyTui.TheatreLiveStateTest do
 
     assert_receive %Phoenix.Socket.Broadcast{topic: "lobby:stage"} = broadcast
 
-    {:noreply, unseated_after} = Theatre.handle_info(broadcast, state)
+    {:noreply, unseated_after, render?: false} = Theatre.handle_info(broadcast, state)
     assert unseated_after.feed == []
 
     seated = %{state | seated?: true}
     {:noreply, seated_after} = Theatre.handle_info(broadcast, seated)
     assert [%{id: id} | _] = seated_after.feed
     assert id == msg.id
+
+    # The same message again (a reconnect replay) changes nothing on stage.
+    assert {:noreply, ^seated_after, render?: false} =
+             Theatre.handle_info(broadcast, seated_after)
+  end
+
+  # The runtime redraws after every message unless told otherwise, so diffs
+  # that only arm (or ride) the refresh timer must skip the redraw; the
+  # timer's `:refresh_others` is the one that draws the moved attendees.
+  test "presence diffs skip the redraw until the coalesced refresh" do
+    state = mount_connected!()
+    diff = %Phoenix.Socket.Broadcast{event: "presence_diff", topic: "lobby:presence"}
+
+    assert {:noreply, armed, render?: false} = Theatre.handle_info(diff, state)
+    assert armed.refresh_pending?
+    assert {:noreply, ^armed, render?: false} = Theatre.handle_info(diff, armed)
+
+    assert_receive :refresh_others, 500
+    assert {:noreply, refreshed} = Theatre.handle_info(:refresh_others, armed)
+    refute refreshed.refresh_pending?
+  end
+
+  test "unrelated messages skip the redraw" do
+    state = mount_connected!()
+    assert {:noreply, ^state, render?: false} = Theatre.handle_info(:unrelated, state)
   end
 end

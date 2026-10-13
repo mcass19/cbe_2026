@@ -127,7 +127,22 @@ defmodule LobbyTui.Theatre.Render do
     {ox, oy}
   end
 
-  defp cropped_lines(state, vw, vh), do: world_lines(state, vw, vh)
+  # The drawn frame carries one span per run of same-styled cells instead of
+  # one per cell. It looks the same, but encoding spans through the NIF is
+  # most of a draw's cost, and a 120×40 room is 4,680 cells. `world_lines/3`
+  # keeps one span per cell, so tests can still address a single cell.
+  defp cropped_lines(state, vw, vh), do: state |> world_lines(vw, vh) |> Enum.map(&merge_runs/1)
+
+  defp merge_runs(%Line{spans: spans} = line) do
+    merged =
+      spans
+      |> Enum.chunk_by(& &1.style)
+      |> Enum.map(fn [first | _] = run ->
+        %{first | content: Enum.map_join(run, & &1.content)}
+      end)
+
+    %{line | spans: merged}
+  end
 
   # -- compositor --------------------------------------------------------
 

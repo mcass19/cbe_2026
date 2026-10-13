@@ -298,6 +298,33 @@ defmodule LobbyTui.Theatre.RenderTest do
     assert [{_world, _}, {_status, _}] = Render.widgets(seated, frame)
   end
 
+  test "widgets: the drawn world merges same-styled cells into one span" do
+    put_scene(%{
+      {0, 0} => {"a", :green, :blue},
+      {1, 0} => {"b", :green, :blue},
+      {2, 0} => {"c", :red, :blue}
+    })
+
+    frame = %Frame{width: 176, height: 97}
+    [{%{text: %{lines: drawn}}, _rect}, _status] = Render.widgets(state({88, 88}), frame)
+    cells = Render.world_lines(state({88, 88}), 176, 96)
+
+    assert [%Span{content: "ab"}, %Span{content: "c", style: %Style{fg: :red}} | _] =
+             hd(drawn).spans
+
+    # Same characters in the same styles, row for row, just fewer spans.
+    for {merged, per_cell} <- Enum.zip(drawn, cells) do
+      assert graphemes(merged) == graphemes(per_cell)
+      assert length(merged.spans) < length(per_cell.spans)
+    end
+  end
+
+  defp graphemes(line) do
+    Enum.flat_map(line.spans, fn span ->
+      span.content |> String.graphemes() |> Enum.map(&{&1, span.style})
+    end)
+  end
+
   test "hint appears in the status line" do
     lined = %{state() | hint: "seat taken — try another"}
     frame = %Frame{width: 60, height: 40}

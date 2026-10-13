@@ -21,6 +21,10 @@ defmodule LobbyTui.Theatre do
   @marquee_tick_ms 83
   @marquee_text "now showing · the stage is yours · say hi from your seat ·"
 
+  # How long a burst of other attendees' moves is gathered before the
+  # room redraws them (see the presence_diff handler).
+  @refresh_others_ms 200
+
   @doc "Frames in a full curtain sweep. `State.curtain` runs 0..this."
   def curtain_steps, do: @curtain_steps
 
@@ -102,26 +106,24 @@ defmodule LobbyTui.Theatre do
   @impl true
   def handle_info({:say, body}, state), do: {:noreply, say(state, body)}
 
-  # Presence diffs arrive at up to one per attendee per movement step, and a
-  # naive handler would rebuild the full others index (and trigger a render)
-  # on every single one — at ~100 attendees that is hundreds of diffs per
-  # second. Coalesce instead: the first diff since the last refresh arms a
-  # 100 ms timer; further diffs before it fires are free (state is
-  # unchanged, so the runtime's per-message render stays on the cheap,
-  # already-indexed render path — see the ex_ratatui render-decision note
-  # in the fix-wave report). `:refresh_others` is the only place the index
-  # actually rebuilds, bounding rebuilds to at most 10/s regardless of
-  # fan-out.
+  # Presence diffs arrive at up to one per attendee per movement step — at
+  # ~100 attendees that is hundreds of diffs per second. Coalesce instead:
+  # the first diff since the last refresh arms a 200 ms timer, and
+  # `:refresh_others` is the only place the index rebuilds and the room
+  # redraws, at most 5/s regardless of fan-out. The diffs themselves skip
+  # the redraw: the runtime draws after every message unless told not to,
+  # and with 50 walkers that was ~150 full frames per second per viewer
+  # (see `priv/scripts/load_ssh.exs`).
   def handle_info(
         %Phoenix.Socket.Broadcast{event: "presence_diff"},
         %State{refresh_pending?: true} = state
       ) do
-    {:noreply, state}
+    {:noreply, state, render?: false}
   end
 
   def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, state) do
-    Process.send_after(self(), :refresh_others, 100)
-    {:noreply, %{state | refresh_pending?: true}}
+    Process.send_after(self(), :refresh_others, @refresh_others_ms)
+    {:noreply, %{state | refresh_pending?: true}, render?: false}
   end
 
   def handle_info(:refresh_others, state) do
@@ -164,7 +166,7 @@ defmodule LobbyTui.Theatre do
         %State{seated?: true} = state
       ) do
     if Enum.any?(state.feed, &(&1.id == message.id)) do
-      {:noreply, state}
+      {:noreply, state, render?: false}
     else
       feed = Enum.take([message | state.feed], 50)
 
@@ -180,7 +182,9 @@ defmodule LobbyTui.Theatre do
     end
   end
 
-  def handle_info(%Phoenix.Socket.Broadcast{topic: "lobby:stage"}, state), do: {:noreply, state}
+  # Standing, the stage is out of view: nothing to redraw.
+  def handle_info(%Phoenix.Socket.Broadcast{topic: "lobby:stage"}, state),
+    do: {:noreply, state, render?: false}
 
   # One frame of the curtain sweep. The target is derived from `seated?`
   # rather than stored, so a sit-then-stand mid-sweep simply reverses on
@@ -191,7 +195,7 @@ defmodule LobbyTui.Theatre do
 
   def handle_info(:marquee_tick, state), do: {:noreply, step_marquee(state)}
 
-  def handle_info(_msg, state), do: {:noreply, state}
+  def handle_info(_msg, state), do: {:noreply, state, render?: false}
 
   # -- curtain ---------------------------------------------------------------
 
