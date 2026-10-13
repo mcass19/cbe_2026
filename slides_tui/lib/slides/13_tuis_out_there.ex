@@ -8,11 +8,9 @@ defmodule TuisEverywhere.Slides.TuisOutThere do
 
   def notes do
     """
-    - everything today was one: this deck, the badge, the pi, the lobby you're sitting in
-    - whole other talk in the box: two runtimes (this deck is the reducer one), images + 3D, markdown, mouse, custom widgets in pure elixir, headless tests, telemetry, burrito binaries. all in the docs
+    - everything today was one: this deck, the badge, the phone, the lobby you're sitting in
     - ash_tui, bb_tui, and the community list
-    - contributions already happen, textarea wrapping came from outside. widgets need no rust
-    - and that last bullet is the point...
+    - and there's room for more...
     """
   end
 
@@ -22,7 +20,7 @@ defmodule TuisEverywhere.Slides.TuisOutThere do
       "the badge and the phone — `nerves` + `raster_ex_ratatui`",
       "`lobby_tui` — ssh + `phoenix_ex_ratatui` + `kino_ex_ratatui`",
       "`ash_tui` + `bb_tui` — Ash explorer, Beam Bots dashboard",
-      "community: `ex_athena`, `beamcore`, `switchyard`, `caudata`, `extop`, `phoenix_gen_api_tui`… yours!?"
+      "community: `ex_athena`, `beamcore`, `caudata`, `extop`, and more…"
     ])
   end
 end

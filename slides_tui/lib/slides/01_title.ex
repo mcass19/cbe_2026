@@ -27,8 +27,7 @@ defmodule TuisEverywhere.Slides.Title do
 
     ---
 
-    - ENERGY
-    - PAUSE
+    - KEEP ENERGY AND MAKE PAUSES
     """
   end
 

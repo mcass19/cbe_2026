@@ -20,12 +20,12 @@ defmodule TuisEverywhere.Slides.Transports do
 
   def render(_state, area) do
     Ui.headline_with_bullets(area, "One app, any door", [
-      "where do the bytes go, where do the events come from",
-      "`:local` — the terminal in front of it, crossterm owns the tty",
-      "`:ssh` — the BEAM as an SSH server, one isolated session per connection",
-      "`:distributed` — attach from another node, the app side never loads the NIF",
-      "`Nerves` — all three doors on one firmware",
-      "`custom` — small contract: bytes out, events in"
+      "`:local`: this terminal",
+      "`:ssh`: the BEAM is the server",
+      "`:distributed`: attach from another node",
+      "`Nerves`: all three, one firmware",
+      "`custom`: bytes out, events in",
+      "*the app never changes*"
     ])
   end
 end

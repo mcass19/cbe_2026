@@ -33,6 +33,20 @@ defmodule TuisEverywhere.Slides.FigureSlidesTest do
       assert plain.fg == nil
     end
 
+    test "a starred phrase comes out bold magenta, next to cyan names" do
+      [%Line{spans: [_marker | spans]}] = Ui.bullet_lines(["`:ssh` is *one more door*"])
+
+      assert [
+               %Span{content: ":ssh", style: %Style{fg: {:rgb, 139, 233, 253}}},
+               %Span{content: " is "},
+               %Span{content: "one more door", style: punch}
+             ] = spans
+
+      assert punch.fg == Ui.theme().accent
+      assert :bold in punch.modifiers
+      assert Ui.item_width("`:ssh` is *one more door*") == String.length(":ssh is one more door")
+    end
+
     test "a links item renders cyan (never dim) and dot-separated" do
       [%Line{spans: [_marker, link]}] = Ui.bullet_lines([{:links, ["a.pm", "b.pm"]}])
       assert %Span{content: "a.pm · b.pm", style: %Style{fg: {:rgb, 139, 233, 253}}} = link

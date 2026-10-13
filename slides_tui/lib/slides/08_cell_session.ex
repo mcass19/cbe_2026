@@ -20,12 +20,11 @@ defmodule TuisEverywhere.Slides.CellSession do
 
   def render(_state, area) do
     Ui.headline_with_bullets(area, "Cells as data", [
-      "transports, one level down: what if there are no bytes at all?",
-      "no terminal — ratatui draws into an off-screen cell buffer",
-      "a cell is data: char + style, every frame a diff, shippable anywhere",
-      "events flow back in as plain structs: a button is a key press",
-      "give it a cell size in pixels and 3D + images arrive as real bitmaps",
-      "the same buffer powers the test story"
+      "*no terminal, no bytes*",
+      "a cell is data: char + style",
+      "keys come back as structs",
+      "pixels → real bitmaps",
+      "same buffer, same tests"
     ])
   end
 end

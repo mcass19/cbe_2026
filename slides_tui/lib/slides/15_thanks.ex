@@ -10,8 +10,7 @@ defmodule TuisEverywhere.Slides.Thanks do
     """
     - thanks for staying
     - links: the library, and everything shown today on the second one
-    - questions: now, or find me
-    - feedback, contributions, showcases more than welcome
+    - questions, feedback, contributions, showcases more than welcome: now, or find me
     - and remember, TUIs are (or can be) everywhere
     - thank you all
     """

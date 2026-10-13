@@ -62,9 +62,26 @@ defmodule TuisEverywhere.Slides.YourTurn do
   def notes do
     """
     - so: the beam deserves more tuis
-    - every rat up there is someone's tui. ash_tui, bb_tui, this deck
-    - the empty seat is yours. local, ssh, phoenix, livebook, a badge
     - come build one, and show me
+
+    ---
+
+    MORE
+    - two runtimes: callbacks or reducer + a state machines guide
+    - 25+ widgets: charts, canvas (the rockets), big text + code blocks (this deck)
+    - chat kit: markdown, textarea, slash commands, throbber. build your own agent tui
+    - custom widgets in pure elixir, no rust
+    - images + 3D in the terminal: kitty, sixel, iterm2
+    - mouse, focus ring, paste + clipboard, themes
+    - testing: headless backend, test_mode + inject_event
+    - debugging: runtime snapshots + traces
+    - telemetry + performance guide, warns when an app falls behind
+    - burrito: one binary, `mix ex_ratatui.gen.burrito`
+    - usage-rules.md for agents, examples catalog, guides
+
+    FUTURE
+    - atomvm: tuis on microcontrollers
+    - dsl
     """
   end
 

@@ -22,7 +22,8 @@ defmodule TuisEverywhere.Slides.Ui do
   The palette is two hues from one family: Code BEAM magenta for the
   chrome (see `SlidesTui.Chrome`) and a lighter violet for everything
   inside a slide that needs an accent — bullet markers, prompts,
-  captions, the title paint. A cyan marks names inside bullets.
+  captions, the title paint. A cyan marks names inside bullets, and the
+  magenta in bold marks the one phrase a slide wants remembered.
 
   Every colour comes from the active `SlidesTui.Theme` at render time,
   so slides read them through the functions here rather than module
@@ -99,6 +100,9 @@ defmodule TuisEverywhere.Slides.Ui do
 
   @doc "The cyan for names to look up, as a foreground style."
   def cyan_style, do: %Style{fg: theme().cyan}
+
+  @doc "The one phrase a slide wants remembered: bold, in the chrome's magenta."
+  def punch_style, do: %Style{fg: theme().accent, modifiers: [:bold]}
 
   @doc "Secondary text (subtitles, hints) as a foreground style."
   def subtle_style, do: %Style{fg: theme().subtle}
@@ -270,7 +274,9 @@ defmodule TuisEverywhere.Slides.Ui do
   would be taller than `max_rows`, the blank lines go.
 
   An item is either a string, where `` `backticked` `` names (packages,
-  atoms, modules) come out in cyan, or `{:links, urls}`, which renders
+  atoms, modules) come out in cyan and a `*starred*` phrase in the bold
+  magenta of `punch_style/0` (one per slide at most, or nothing stands
+  out), or `{:links, urls}`, which renders
   the urls cyan and dot-separated like the closing slide. Links are
   never dim: a projector washes dim text out, and links are what the
   room copies down.
@@ -369,17 +375,19 @@ defmodule TuisEverywhere.Slides.Ui do
   defp spans({:links, urls}),
     do: [Span.new(Enum.join(urls, " · "), style: cyan_style())]
 
-  # Splitting on backticks leaves the marked names at the odd positions.
+  # Splitting with the captures kept leaves every marked run whole, its
+  # markers still on to tell names from punches.
   defp spans(text) when is_binary(text) do
-    text
-    |> String.split("`")
-    |> Enum.with_index()
-    |> Enum.reject(fn {part, _i} -> part == "" end)
+    ~r/`[^`]+`|\*[^*]+\*/
+    |> Regex.split(text, include_captures: true, trim: true)
     |> Enum.map(fn
-      {part, i} when rem(i, 2) == 1 -> Span.new(part, style: cyan_style())
-      {part, _i} -> Span.new(part)
+      "`" <> _ = name -> Span.new(unmark(name), style: cyan_style())
+      "*" <> _ = punch -> Span.new(unmark(punch), style: punch_style())
+      plain -> Span.new(plain)
     end)
   end
+
+  defp unmark(marked), do: String.slice(marked, 1..-2//1)
 
   # Greedy word wrap that keeps each character's style: the spans
   # become styled graphemes, words break only at spaces, and each line

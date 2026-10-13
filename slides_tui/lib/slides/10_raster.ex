@@ -7,13 +7,11 @@ defmodule TuisEverywhere.Slides.Raster do
   @photo "raster.png"
 
   @bullets [
-    "a TUI on a panel that only knows pixels — e-ink, `/dev/fb0`, no terminal",
-    "any panel is one module: geometry from `init/1`, pixels out in `push/2`",
-    "a Linux framebuffer is one line: `use Framebuffer.Surface, rotate: 90`",
-    "cells → glyphs from a bitmap font, pixel regions blitted at native size",
-    "patches, not frames: only the rectangles that changed reach the panel",
-    "pixel formats: 1-bit with tone rules + dither, RGB565, XRGB8888",
-    "keyboards and touch over `evdev`: a button is a key press, a tap a click",
+    "*pixels only*: e-ink, `/dev/fb0`",
+    "one module per panel",
+    "framebuffer: `use Framebuffer.Surface, rotate: 90`",
+    "only what changed is pushed",
+    "buttons + touch as input",
     {:links, ["hex.pm/packages/raster_ex_ratatui", "raster-ex-ratatui.hexdocs.pm"]}
   ]
 

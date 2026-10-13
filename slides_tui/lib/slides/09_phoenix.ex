@@ -7,12 +7,10 @@ defmodule TuisEverywhere.Slides.Phoenix do
   @screenshot "phoenix.png"
 
   @bullets [
-    "a TUI inside a LiveView page — no terminal emulator at all",
-    "cells over the socket: structured diffs, not ANSI",
-    "a ~5KB JS hook paints cells straight into the DOM",
-    "pixel regions ride along as PNG: 3D and images at full resolution",
-    "full page LiveView, or a `LiveComponent` inside one",
-    "navigation intents: `{:navigate, path}` from any handler",
+    "*no terminal emulator*",
+    "cell diffs over the socket",
+    "a ~5KB JS hook",
+    "3D + images as PNG",
     {:links, ["hex.pm/packages/phoenix_ex_ratatui", "phoenix-ex-ratatui.hexdocs.pm"]}
   ]
 

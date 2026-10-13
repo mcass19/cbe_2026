@@ -32,11 +32,11 @@ defmodule TuisEverywhere.Slides.Bridge do
   """
 
   @bullets [
-    "widgets are plain Elixir structs — data in, cells out",
-    "`Rustler` — one NIF call per frame, maps in, ratatui renders",
-    "layout is ratatui's constraint solver — Elixir never does cell math",
-    "events polled on a dirty IO scheduler, delivered as messages",
-    "`rustler_precompiled` — no Rust toolchain needed"
+    "widgets are plain structs",
+    "*one NIF call* per frame",
+    "ratatui does the layout",
+    "keys arrive as messages",
+    "`rustler_precompiled`: no Rust needed"
   ]
 
   def title, do: "Rustler"

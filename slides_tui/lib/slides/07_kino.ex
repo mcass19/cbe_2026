@@ -7,11 +7,10 @@ defmodule TuisEverywhere.Slides.Kino do
   @screenshot "kino.png"
 
   @bullets [
-    "a TUI inside a Livebook cell — `Kino.JS.Live` + xterm.js",
-    "a custom transport, for real: ANSI bytes out, keys and resizes back",
-    "any `ExRatatui.App` runs unchanged, `Mix.install` and go",
-    "inline images over Sixel, themes, one-shot frames for docs",
-    "attached runtime: a notebook cell driving a TUI on a running node",
+    "a TUI in a *notebook cell*",
+    "just a custom transport",
+    "any app, unchanged",
+    "`Mix.install` and go",
     {:links, ["hex.pm/packages/kino_ex_ratatui", "kino-ex-ratatui.hexdocs.pm"]}
   ]
 

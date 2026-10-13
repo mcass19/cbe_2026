@@ -19,12 +19,11 @@ defmodule TuisEverywhere.Slides.RatatuiStory do
 
   def render(_state, area) do
     Ui.headline_with_bullets(area, "Ratatui", [
-      "Rust's TUI library — the community fork of tui-rs (2023), thriving since",
-      "immediate mode: describe the frame, ratatui diffs the rest",
-      "rich widgets: paragraphs, tables, charts, canvas, and friends",
-      "wanted on the BEAM: processes, supervision, distribution",
-      "pure-BEAM options exist too: `term_ui`, `breeze`",
-      "`ex_ratatui` — bind the best renderer instead of writing one, via `Rustler`"
+      "Rust's TUI library, community-run",
+      "*immediate mode*: describe the frame",
+      "tables, charts, canvas, and friends",
+      "pure-BEAM too: `term_ui`, `breeze`",
+      "`ex_ratatui`: bind it with `Rustler`"
     ])
   end
 end
