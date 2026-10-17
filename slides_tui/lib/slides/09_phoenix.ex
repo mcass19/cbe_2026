@@ -22,7 +22,7 @@ defmodule TuisEverywhere.Slides.Phoenix do
     - no xterm, no ansi. cell diffs over the liveview socket, tiny hook paints spans. ~5KB js
     - two shapes: LiveView full page, LiveComponent inside a page. same module is the liveview and the app
     - handlers return navigate / patch / redirect intents
-    - bandwidth: a static screen costs nothing, a ticking dashboard costs the cells that changed
+    - the guides cover the rest
     """
   end
 

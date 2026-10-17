@@ -58,8 +58,10 @@ defmodule TuisEverywhere.Slides.Demo do
 
   def notes do
     """
-    - goatmire badge, credit Lars Wikman for Goatmire. credit Gus Workman for badge. nerves, 400x300 e-ink, 1 bit, two buttons
-    - fairphone 3. credit Marc Lainez. Nerves everywhere. Framebuffer.
+    - badge: credit Lars Wikman for Goatmire, Gus Workman for the badge. nerves, 400x300 e-ink, two buttons
+    - just show it. images are dithered to black and white
+    - fairphone 3: credit Marc Lainez, nerves everywhere. nerves discord for the fun stuff
+    - same app as the pi on the previous slide: three devices, one app
     """
   end
 

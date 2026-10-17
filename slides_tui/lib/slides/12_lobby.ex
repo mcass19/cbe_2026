@@ -23,6 +23,8 @@ defmodule TuisEverywhere.Slides.Lobby do
     - lobby_tui: the theatre from the interstitial, for real. a small pixel-art room, seats in front, a stage behind curtains
     - what everybody is about to do: pick a nick and an avatar, walk in with the arrows, grab a seat. seated -> post, it lands on the stage feed, everyone sees it
     - all in memory: ash on ets, presence for who is where, pubsub for the feed. leave -> gone, restart -> wiped. no personal info please
+    - switching: "here's the browser" / "here's ssh" / "here's livebook"
+    - CHECKPOINT ~17:00
     """
   end
 

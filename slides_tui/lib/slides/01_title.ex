@@ -22,7 +22,7 @@ defmodule TuisEverywhere.Slides.Title do
     """
     - hi everyone, thanks for having me
     - tuis: terminal user interfaces. a library to build them in elixir
-    - ratatui + beam superpowers
+    - ratatui's rendering + beam superpowers
     - there's a demo because first talk, of course
 
     ---

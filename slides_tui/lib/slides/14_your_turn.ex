@@ -66,7 +66,7 @@ defmodule TuisEverywhere.Slides.YourTurn do
 
     ---
 
-    MORE
+    MORE, only if ahead of time
     - two runtimes: callbacks or reducer + a state machines guide
     - 25+ widgets: charts, canvas (the rockets), big text + code blocks (this deck)
     - chat kit: markdown, textarea, slash commands, throbber. build your own agent tui

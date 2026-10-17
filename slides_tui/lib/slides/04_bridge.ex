@@ -44,14 +44,14 @@ defmodule TuisEverywhere.Slides.Bridge do
   def notes do
     """
     - the bridge: rustler, what makes the talk possible
-    - a widget is a struct. no process, no state. paragraph, gauge, table, same shape
-    - render/2 -> list of {widget, rect} -> plain maps -> one nif call per frame, not per widget
-    - rust side decodes into ratatui types, ratatui does layout, diffing, painting. elixir never does cell math
+    - code on the right: elixir struct on top, rust decode below
+    - a widget is a struct. no process, no state
+    - render/2 -> plain maps -> one nif call per frame, not per widget
+    - rust side decodes, ratatui does layout, diffing, painting. i'm not the smart one here
     - input the other way: poll on a dirty io scheduler, keys arrive as messages
     - terminal lives in a ResourceArc: dies with the process, restores the tty on gc
     - rustler_precompiled: mix deps.get, no cargo anywhere
-    - the nif loads lazily on first use: depending on the library never pulls rust into the compiler vm
-    - safety: a rust panic is an elixir exception in the calling process, not a vm death. zero unsafe blocks in the crate, the risk lives in the deps (ratatui, crossterm, image decoders)
+    - for Q&A: lazy nif load, panics + unsafe (faq)
     """
   end
 

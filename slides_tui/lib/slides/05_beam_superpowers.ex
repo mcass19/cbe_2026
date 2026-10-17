@@ -60,6 +60,7 @@ defmodule TuisEverywhere.Slides.BeamSuperpowers do
     - with that: a liveview-like callback runtime, local terminal, all my first ideas done
     - now the fun part, what makes this more than a local toy
     - processes, supervision, distribution, now with a tui screen
+    - CHECKPOINT ~6:30
     """
   end
 

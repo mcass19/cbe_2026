@@ -8,12 +8,11 @@ defmodule TuisEverywhere.Slides.RatatuiStory do
 
   def notes do
     """
-    - giant shoulders: ratatui, rust tui library
-    - found it early on while learning rust, impressed by how easy it was
-    - community maintained: handful of volunteer maintainers, open collective, thousands of stars and crates. all credit to them and to Florian Dehau for tui-rs
-    - immediate mode is the trick: every frame is plain data -> plain data can cross into rust once per frame
-    - not the only way: term_ui (jido folks, elm-style runtime) and breeze (gazler, liveview-style) are pure beam, no nif. go look at them
-    - different trade: i wanted ratatui's renderer + widgets, so a nif to bind the best one
+    - giant shoulders: ratatui, rust tui library. found it while learning rust
+    - community maintained: volunteer maintainers, open collective. credit to them and to Florian Dehau for tui-rs
+    - immediate mode is the trick: every frame is plain data -> crosses into rust once per frame
+    - pure beam: term_ui, breeze, and etui for gleam. no nif, go look at them
+    - i wanted ratatui's renderer, so a nif
     """
   end
 
