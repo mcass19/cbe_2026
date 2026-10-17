@@ -2,6 +2,8 @@
 
 The live demo room for the Code BEAM Europe 2026 talk "TUIs everywhere." A small pixel-art lobby with seats and a chat stage, walkable with the arrow keys, sittable, postable — running as a real terminal UI (`ex_ratatui`) embedded inside a Phoenix LiveView page, on a real local terminal, over SSH, and inside a Livebook cell. One app module, four ways in, everyone on the same node in the same room.
 
+The deployed room at `lobby-tui.fly.dev` was up for the talk and may be offline now; `mix phx.server` (with `LOBBY_SSH=1` for SSH) runs the same room locally, see "Running it" below.
+
 ## Four entry points, one room
 
 **Browser.** Visit `https://lobby-tui.fly.dev`, pick a nickname and an avatar, and land in the room. Movement is arrow keys or the on-screen D-pad; `s` or Enter sits; the chat box under the room posts to the stage feed once seated.
@@ -27,8 +29,10 @@ ssh alice@localhost -p 2222
 The steps below are the full runbook, written to be followed cold.
 
 ```
-# 1. Tunnel up (no-op if already up).
-sudo wg-quick up ./lobby-wg.conf
+# 1. Tunnel up (no-op if already up). AppArmor keeps wg-quick from reading
+#    configs outside /etc/wireguard, so install the config there once.
+sudo install -m 600 -o root -g root lobby-wg.conf /etc/wireguard/
+sudo wg-quick up lobby-wg
 
 # 2. Ask the release for its node name and cookie. The node name embeds the
 #    image tag, so it CHANGES ON EVERY DEPLOY — re-run this after deploying.

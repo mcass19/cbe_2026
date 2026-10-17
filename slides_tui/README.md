@@ -46,7 +46,7 @@ A terminal only scales text through its font size, so the slides scale the other
 `mix slides.tui` also serves a presenter view over SSH on `127.0.0.1:2223`: the current slide's notes, the next slide's title, a talk timer and the clock. With the screen extended, the deck goes on the projector and the presenter view on the laptop:
 
 ```bash
-mix slides.tui --talk-length 40   # projector
+mix slides.tui --talk-length 20   # projector
 ssh -p 2223 localhost             # laptop
 ```
 
