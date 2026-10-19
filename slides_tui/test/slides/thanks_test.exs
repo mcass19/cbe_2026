@@ -42,6 +42,21 @@ defmodule TuisEverywhere.Slides.ThanksTest do
     assert label_rect.y == frame.y + frame.height
   end
 
+  # 120 wide fits "Thanks!" at full size but not the title, so the two
+  # only match if they switch together.
+  for {w, h, size} <- [{120, 40, :quadrant}, {160, 40, :full}] do
+    test "the banner matches the title slide's at #{w}×#{h}", %{state: state} do
+      area = %Rect{x: 0, y: 0, width: unquote(w), height: unquote(h)}
+      {:ok, title} = TuisEverywhere.Slides.Title.mount([])
+
+      [{%BigText{pixel_size: thanks}, _} | _] = Thanks.render(state, area)
+      [{%BigText{pixel_size: opening}, _} | _] = TuisEverywhere.Slides.Title.render(title, area)
+
+      assert thanks == unquote(size)
+      assert opening == thanks
+    end
+  end
+
   test "without the QR file, a placeholder still gets the label" do
     widgets = Thanks.render(%{qr: nil}, @area)
 

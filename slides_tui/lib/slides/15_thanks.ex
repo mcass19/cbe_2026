@@ -39,7 +39,7 @@ defmodule TuisEverywhere.Slides.Thanks do
     Ui.headline_with_figure(area, banner(), {:lines, lines()}, captioned(Ui.figure(qr, @qr)),
       share: 35,
       max_rows: 11,
-      banner: :own
+      banner: :bookend
     )
   end
 

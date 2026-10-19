@@ -43,6 +43,8 @@ defmodule TuisEverywhere.Slides.Ui do
   # banner at the same grid size, so headlines never change size from
   # one slide to the next.
   @widest_headline 17
+  # "TUIs everywhere": the title and the closing slide share one banner size.
+  @widest_bookend 15
   @gap_cols 4
   @figure_share 45
   # A cell's width:height in pixels. Measured in Ghostty with JetBrains
@@ -126,8 +128,8 @@ defmodule TuisEverywhere.Slides.Ui do
 
     * `:alignment` — aligns the lines inside the block (default `:left`)
     * `:banner` — `:deck` (default) sizes the headline like every other
-      slide's; `:own` picks the biggest size its own text fits, for the
-      bookend slides
+      slide's; `:bookend` sizes the title and the closing slide alike,
+      going big once the title fits
   """
   def headline_with_text(area, headline, text, opts \\ []) do
     stage = stage(area)
@@ -340,22 +342,21 @@ defmodule TuisEverywhere.Slides.Ui do
 
   # The headline switches to the big banner at the same grid for every
   # slide: once the widest headline fits and the banner takes no more
-  # than a fifth of the height. A bookend sizes its banner by its own
-  # text instead, as long as the banner stays under a third of the height.
+  # than a fifth of the height. The two bookends switch together, sized
+  # by the title (the wider of the two), as long as the banner stays
+  # under a third of the height: sized by its own text, "Thanks!" went
+  # big on grids where the title couldn't.
   defp headline_size(_stage, nil, _banner), do: nil
 
   defp headline_size(%Rect{width: w, height: h}, _headline, :deck)
        when w >= 8 * @widest_headline and h >= 40,
        do: :full
 
-  defp headline_size(%Rect{width: w, height: h}, headline, :own) do
-    if w >= 8 * headline_length(headline) and h >= 24, do: :full, else: :quadrant
-  end
+  defp headline_size(%Rect{width: w, height: h}, _headline, :bookend)
+       when w >= 8 * @widest_bookend and h >= 24,
+       do: :full
 
   defp headline_size(_stage, _headline, _banner), do: :quadrant
-
-  defp headline_length(%Line{spans: spans}), do: spans_width(spans)
-  defp headline_length(text), do: String.length(text)
 
   defp headline_rows(:full), do: 8
   defp headline_rows(:quadrant), do: 4

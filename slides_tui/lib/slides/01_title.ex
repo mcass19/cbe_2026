@@ -60,7 +60,7 @@ defmodule TuisEverywhere.Slides.Title do
 
     Ui.headline_with_text(area, painted_title(min(tick, @letters)), {:lines, subtitle},
       alignment: :center,
-      banner: :own
+      banner: :bookend
     )
   end
 
