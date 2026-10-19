@@ -153,10 +153,13 @@ defmodule TuisEverywhere.Slides.Ui do
     * `:figure_side` — `:right` (default) or `:left`
     * `:max_height` — caps the figure at this share of the height under
       the headline, in percent. Defaults to 100.
+    * `:max_rows` — caps the figure at this many rows, whatever the grid,
+      for a figure that should stay a companion to the text
+    * `:banner` — as in `headline_with_text/4`
   """
   def headline_with_figure(area, headline, text, {_kind, _cols, _rows, draw} = figure, opts \\ []) do
     stage = stage(area)
-    size = headline_size(stage, headline, :deck)
+    size = headline_size(stage, headline, Keyword.get(opts, :banner, :deck))
     rows = body_rows(stage, headline, size)
     gap = if text, do: @gap_cols, else: 0
 
@@ -166,7 +169,12 @@ defmodule TuisEverywhere.Slides.Ui do
         text -> text_lines(text, stage.width - share_width(figure, stage, opts) - gap, rows)
       end
 
-    max_rows = div(rows * Keyword.get(opts, :max_height, 100), 100)
+    max_rows =
+      min(
+        div(rows * Keyword.get(opts, :max_height, 100), 100),
+        Keyword.get(opts, :max_rows, rows)
+      )
+
     {fig_w, fig_h} = figure_size(figure, stage.width - text_w - gap, max_rows)
     {head, body} = headed(stage, headline, size, max(length(lines), fig_h))
     bundle = SlidesLayout.center(body, width: text_w + gap + fig_w)
